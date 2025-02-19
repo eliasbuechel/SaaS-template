@@ -1,0 +1,49 @@
+services:
+  auth-service:
+    image: auth-service
+    container_name: auth-service
+    build:
+      context: ./../../backend/auth-service
+      args:
+        NODE_ENV: development
+    env_file:
+      - ../../backend/auth-service/.env
+    ports:
+      - "4000:4000"
+    depends_on:
+      - auth-service-db-postgres
+      - auth-service-db-redis
+    networks:
+      - auth-service-network
+    command: ["yarn", "dev"]
+        
+  auth-service-db-postgres:
+    image: postgres:14
+    container_name: auth-service-db-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-service-db-postgres-data:/var/lib/postgresql/data
+    networks:
+      - auth-service-network
+
+  auth-service-db-redis:
+    image: redis:latest
+    container_name: auth-service-db-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - auth-service-network
+        
+volumes:
+  auth-service-db-postgres-data:
+    
+networks:
+  auth-service-network:
+    driver: bridge
