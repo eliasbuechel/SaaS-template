@@ -3,7 +3,7 @@ services:
     image: auth-service
     container_name: auth-service
     build:
-      context: ./../../backend/auth-service
+      context: ../../backend/auth-service
       args:
         NODE_ENV: development
     env_file:
@@ -15,6 +15,7 @@ services:
       - auth-service-db-redis
     networks:
       - auth-service-network
+      - customer-dashboard-network
     command: ["yarn", "dev"]
         
   auth-service-db-postgres:
@@ -41,9 +42,29 @@ services:
     networks:
       - auth-service-network
         
+        
+  customer-dashboard:
+    image: customer-dashboard
+    container_name: customer-dashboard
+    build:
+      context: ../../frontend/customer-dashboard
+      args:
+        NODE_ENV: development
+    env_file:
+      - ../../frontend/customer-dashboard/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    networks:
+      - customer-dashboard-network
+    command: [ "yarn", "dev" ]
+      
 volumes:
   auth-service-db-postgres-data:
     
 networks:
   auth-service-network:
+    driver: bridge
+  customer-dashboard-network:
     driver: bridge
