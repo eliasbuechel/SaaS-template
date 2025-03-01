@@ -1,13 +1,12 @@
-import * as crypto from "node:crypto";
 import { Router, Request, Response } from "express";
-import {pool} from "../lib/database";
-import {dev, googleClientId, googleRedirectSecret, googleRedirectUri} from "../lib/config";
+import {addUserWithGoogleIdAndEmail, getUserByGoogleId} from "../lib/database";
+import {dev, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI} from "../lib/config";
+import {IUser} from "../interfaces/IUser";
+import logger from "../utils/logger";
+import {generateAccessToken, generateRefreshToken} from "../utils/generateToken";
+import {generateRandomString} from "../utils/encryption";
 
 const googleRouter: Router = Router();
-
-function generateRandomString(length = 64) {
-    return crypto.randomBytes(length).toString('hex');
-}
 
 googleRouter.get("/auth", (req: Request, res: Response): void => {
     const state = generateRandomString(8);
@@ -16,8 +15,8 @@ googleRouter.get("/auth", (req: Request, res: Response): void => {
     const scopes = ['openid', 'profile', 'email'];
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${googleClientId}` +
-        `&redirect_uri=${encodeURIComponent(googleRedirectUri)}` +
+        `client_id=${GOOGLE_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(scopes.join(' '))}` +
         `&state=${state}` +
@@ -31,6 +30,7 @@ googleRouter.get("/oauth2callback", async (req: Request, res: Response): Promise
     const { code, state } = req.query;
 
     if (state !== req.session.googleOAuthState) {
+        logger.warn("Invalid state parameter for Google OAuth");
         res.status(403).json({ error: 'Invalid state parameter' });
         return;
     }
@@ -41,63 +41,44 @@ googleRouter.get("/oauth2callback", async (req: Request, res: Response): Promise
         return;
     }
     
-    const tokenUrl = 'https://oauth2.googleapis.com/token';
     try {
-        const response = await fetch(tokenUrl, {
+        const tokenUrl: string = 'https://oauth2.googleapis.com/token';
+        const response: globalThis.Response = await fetch(tokenUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 code: code as string,
-                client_id: googleClientId!,
-                client_secret: googleRedirectSecret!,
-                redirect_uri: googleRedirectUri!,
+                client_id: GOOGLE_CLIENT_ID!,
+                client_secret: GOOGLE_CLIENT_SECRET!,
+                redirect_uri: GOOGLE_REDIRECT_URI!,
                 grant_type: 'authorization_code'
             })
         });
+        
         const responseData = await response.json();
-
-        if (responseData.access_token) {
-            const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${responseData.access_token}` }
-            });
-            const userInfo = await userInfoResponse.json();
-
-            const query = `
-                INSERT INTO users (google_id, access_token, refresh_token)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (google_id)
-                DO UPDATE SET access_token = EXCLUDED.access_token,
-                              refresh_token = EXCLUDED.refresh_token,
-                              updated_at = NOW()
-                RETURNING *;
-            `;
-
-            const values = [userInfo.sub, responseData.access_token, responseData.refresh_token];
-
-            const result = await pool.query(query, values);
-            console.log("Stored user in DB:", result.rows[0]);
-
-            res.cookie('access_token', responseData.access_token, {
-                httpOnly: true,
-                secure: !dev,
-                sameSite: 'lax' // Adjust according to your requirements
-            });
-            res.cookie('refresh_token', responseData.refresh_token, {
-                httpOnly: true,
-                secure: !dev,
-                sameSite: 'lax'
-            });
-
-            res.redirect('http://localhost:3000/dashboard');
-            return;
-        } else {
-            res.status(400).json({ error: 'Failed to fetch access token', details: responseData });
-            return;
+        if (!responseData.access_token) {
+            res.status(400).json({ error: "Failed to fetch access token" });
+            return
         }
-    } catch (err) {
-        console.error('Error fetching access token:', err);
-        res.status(500).json({ error: 'Internal server error' });
-        return;
+
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${responseData.access_token}` }
+        });
+        const userInfo = await userInfoResponse.json();
+
+        const user: IUser = await getUserByGoogleId(userInfo.sub) ?? await addUserWithGoogleIdAndEmail(userInfo.sub, userInfo.email)
+        
+        let accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user.id);
+
+        res.cookie("access_token", accessToken, { httpOnly: true, secure: !dev, sameSite: "lax" });
+        res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: !dev, sameSite: "lax" });
+
+        logger.info(`User ${user.email} authenticated. Redirecting to Connect Shopify.`);
+        res.redirect("http://localhost:3000/dashboard");
+    } catch (error) {
+        console.error("Google OAuth Error:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 

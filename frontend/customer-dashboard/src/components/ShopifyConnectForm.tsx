@@ -3,7 +3,7 @@
 import React from "react";
 import Form from "next/form";
 import {useState} from "react";
-import {nextPublicAuthServiceUrl} from "@/lib/config";
+import {NEXT_PUBLIC_AUTH_SERVICE_URL} from "@/lib/config";
 
 
 export default function ShopifyConnectForm() {
@@ -13,11 +13,21 @@ export default function ShopifyConnectForm() {
         if (!shopName) {
             return
         }
-        
-        window.location.href = `${nextPublicAuthServiceUrl}/api/shopify/auth?shop=${encodeURIComponent(shopName)}`;
+
+        fetch(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/shopify/auth?shop=${encodeURIComponent(shopName)}`, {credentials: "include"})
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirectUrl) {
+                    window.location.href = data.redirectUrl; // ✅ Manually redirect after authentication
+                } else {
+                    console.error("Error: No redirect URL provided", data);
+                }
+            })
+            .catch(error => console.error("Shopify Auth Error:", error));
+
 
         console.log('Connecting to the shop: ', shopName);
-        console.log('Auth service url: ', nextPublicAuthServiceUrl);
+        console.log('Auth service url: ', NEXT_PUBLIC_AUTH_SERVICE_URL);
     }
     
     return <Form action={shopifyConnect}>

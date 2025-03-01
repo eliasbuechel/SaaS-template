@@ -19,7 +19,9 @@
     "shopify-api-node": "^3.14.2",
     "typescript": "^5.7.3",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
@@ -28,6 +30,8 @@
     "@types/cors": "^2.8.17",
     "@types/cookie-parser": "^1.4.8",
     "@types/pg": "^8.11.11",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.4",
     "eslint": "^9.20.1",
     "globals": "^15.15.0",
     "ts-node-dev": "^2.0.0",

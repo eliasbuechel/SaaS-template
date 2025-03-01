@@ -1,8 +1,11 @@
-import pg from 'pg'
-import {databaseUrl} from "./config";
+import pg, {QueryResult} from 'pg'
+import {DATABASE_URL} from "./config";
+import {ITenant} from "../interfaces/ITenant";
+import {IUser} from "../interfaces/IUser";
+import logger from "../utils/logger";
 
 const { Pool, Client } = pg
-const connectionString = databaseUrl
+const connectionString = DATABASE_URL
 
 const pool = new Pool({
     connectionString,
@@ -11,52 +14,164 @@ const pool = new Pool({
 const getClient = async () => {
     const client = new Client({ connectionString });
     await client.connect();
+    logger.info("Database client connected");
     return client;
 };
 
 const initializeDatabase = async () => {
     const client = await getClient();
     try {
-        console.log("Initializing database...");
-        // await client.query(`
-        //     CREATE TABLE IF NOT EXISTS users (
-        //         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        //         email VARCHAR(255) UNIQUE NOT NULL,
-        //         password_hash TEXT, -- Only for non-Shopify users
-        //         shopify_shop_id VARCHAR(255) UNIQUE, -- If Shopify user
-        //         shopify_access_token TEXT, -- If Shopify user
-        //         role VARCHAR(50) CHECK (role IN ('admin', 'merchant')),
-        //         created_at TIMESTAMP DEFAULT NOW()
-        //     );
-        // `);
+        logger.info("Initializing database...");
+        const start: number = Date.now();
+        
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                google_id VARCHAR(255) UNIQUE NOT NULL,
-                access_token TEXT,
-                refresh_token TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email TEXT UNIQUE NOT NULL,
+                google_id TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT now(),
+                updated_at TIMESTAMP DEFAULT now()
+            );
+
+            CREATE TABLE IF NOT EXISTS tenants (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                shopify_store_domain TEXT UNIQUE NOT NULL,
+                shopify_access_token TEXT NOT NULL,
+                user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE, -- 1:1 Relationship for now
+                created_at TIMESTAMP DEFAULT now(),
+                updated_at TIMESTAMP DEFAULT now()
             );
         `);
-        console.log("Database initialized: 'users' table created (if not exists).");
+        
+        const timeTaken: number = Date.now() - start;
+        logger.info(`Database initialized successfully in ${timeTaken}ms`);
     } catch (error) {
-        console.error("Error initializing database:", error);
+        logger.error("Error initializing database:", error);
         throw error;
     } finally {
-        client.end();
+        await client.end();
+        logger.info("Database client connection closed");
     }
 };
 
 export const connect = async () => {
     try {
+        const start = Date.now();
+        
         const res = await pool.query("SELECT NOW()");
-        console.log("Database connected at:", res.rows[0].now);
+        logger.info(`Database connected at: ${res.rows[0].now}`);
         await initializeDatabase()
+        
+        const timeTaken = Date.now() - start;
+        logger.info(`Database connection and setup completed in ${timeTaken}ms`);
     } catch (error) {
-        console.error("Database connection error:", error);
+        logger.error("Database connection error:", error);
         throw error;
     }
+};
+
+const queryLogger = async (query: string, params: any[]) => {
+    const start = Date.now();
+    try {
+        const result = await pool.query(query, params);
+        const timeTaken = Date.now() - start;
+        logger.debug(`SQL Query Executed: ${query} - Time taken: ${timeTaken}ms`);
+        return result;
+    } catch (error) {
+        logger.error(`SQL Query Failed: ${query} - Error: ${error.message}`);
+        throw error;
+    }
+};
+
+const mapFirstUserFromQuery = (usersQueryResult: QueryResult<any>): IUser | null  => {
+    if (usersQueryResult.rows.length === 0) return null;
+    
+    return {
+        id: usersQueryResult.rows[0].id,
+        email: usersQueryResult.rows[0].email,
+        googleId: usersQueryResult.rows[0].google_id,
+        createdAt: usersQueryResult.rows[0].created_at,
+        updatedAt: usersQueryResult.rows[0].updated_at
+    };
+}
+
+const mapFirstTenantFromQuery = (tenantQueryResult: QueryResult<any>): ITenant | null  => {
+    if (tenantQueryResult.rows.length === 0) return null;
+
+    return {
+        id: tenantQueryResult.rows[0].id,
+        shopifyStoreDomain: tenantQueryResult.rows[0].shopify_store_domain,
+        shopifyAccessToken: tenantQueryResult.rows[0].shopify_access_token,
+        userId: tenantQueryResult.rows[0].user_id,
+        createdAt: tenantQueryResult.rows[0].created_at,
+        updatedAt: tenantQueryResult.rows[0].updated_at
+    };
+}
+
+const mapAllTenantFromQuery = (tenantQueryResult: QueryResult<any>): Array<ITenant> => {
+    if (tenantQueryResult.rows.length === 0) return new Array<ITenant>();
+
+    return tenantQueryResult.rows.map(() => {
+        return {
+            id: tenantQueryResult.rows[0].id,
+            shopifyStoreDomain: tenantQueryResult.rows[0].shopify_store_domain,
+            shopifyAccessToken: tenantQueryResult.rows[0].shopify_access_token,
+            userId: tenantQueryResult.rows[0].user_id,
+            createdAt: tenantQueryResult.rows[0].created_at,
+            updatedAt: tenantQueryResult.rows[0].updated_at
+        };
+    })
+}
+
+export const getTenantByUserId = async (userId: string): Promise<ITenant | null> => {
+    const result = await queryLogger("SELECT * FROM tenants WHERE user_id = $1", [userId]);
+    return mapFirstTenantFromQuery(result);
+};
+
+export const getTenantCountForUserByUserId = async (userId: string): Promise<number> => {
+    const countResult = await queryLogger("SELECT COUNT(*) FROM tenants WHERE user_id = $1", [userId]);
+    return parseInt(countResult.rows[0].count, 10);
+};
+
+export const getAllTenantsOfUserByUserId = async (userId: string): Promise<Array<ITenant> | null> => {
+    const result = await queryLogger("SELECT * FROM tenants WHERE user_id = $1", [userId]);
+    return mapAllTenantFromQuery(result);
+};
+
+export const getUserByGoogleId = async (googleId: string): Promise<IUser | null> => {
+    const result = await queryLogger("SELECT * FROM users WHERE google_id = $1", [googleId]);
+    if (result.rows.length === 0) {
+        logger.warn(`No user found with Google ID: ${googleId}`);
+        return null;
+    }
+    
+    return mapFirstUserFromQuery(result);
+};
+
+export const getUserById = async (id: string): Promise<IUser | null> => {
+    const result = await queryLogger("SELECT * FROM users WHERE id = $1", [id]);
+    return mapFirstUserFromQuery(result);
+};
+
+export const addUserWithGoogleIdAndEmail = async (googleId: string, email: string): Promise<IUser> => {
+    const result = await queryLogger("INSERT INTO users (google_id, email) VALUES ($1, $2) RETURNING *", [googleId, email]);
+    if (result.rows.length === 0) {
+        logger.error(`Failed to insert user with Google ID: ${googleId}`);
+        throw new Error("Failed to insert user with Google ID: " + googleId);
+    }
+    return mapFirstUserFromQuery(result);
+};
+
+export const getTenantByShopifyStoreDomainOrUpdate = async (shopifyStoreName: string, shopifyAccessTokenEncrypted: string, userId: string): Promise<ITenant | null> => {
+    const result = await queryLogger(
+        `INSERT INTO tenants (shopify_store_domain, shopify_access_token, user_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (shopify_store_domain)
+         DO UPDATE SET shopify_access_token = EXCLUDED.shopify_access_token, updated_at = NOW()
+         RETURNING id;`,
+        [shopifyStoreName, shopifyAccessTokenEncrypted, userId]
+    )
+    return mapFirstTenantFromQuery(result);
 };
 
 export { pool, getClient };

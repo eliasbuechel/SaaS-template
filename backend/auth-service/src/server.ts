@@ -4,14 +4,15 @@ import router from "./routes/router";
 import session from 'express-session'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import {dev, allowedCorsOrigin, nodeEnv, sessionSecret} from "./lib/config";
+import {dev, ALLOWED_CORS_ORIGIN, NODE_ENV, SESSION_SECRET} from "./lib/config";
+import logger from "./utils/logger";
 
 const app: Application = express();
 const port: number = 4000;
 
 app.use(
     session({
-        secret: sessionSecret,
+        secret: SESSION_SECRET,
         saveUninitialized: false,
         cookie: {
             secure: !dev,
@@ -20,7 +21,7 @@ app.use(
     })
 );
 app.use(cors({
-    origin: allowedCorsOrigin,
+    origin: ALLOWED_CORS_ORIGIN,
     credentials: true,
 }));
 app.use(cookieParser());
@@ -37,5 +38,5 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.listen(port, () => {
-    return console.log(`Express is listening at http://localhost:${port} in ${nodeEnv} mode`);
+    logger.info(`Express is listening at http://localhost:${port} in ${NODE_ENV} mode`);
 });
