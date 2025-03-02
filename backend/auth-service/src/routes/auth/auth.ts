@@ -1,17 +1,17 @@
 import {Router, Request, Response} from "express";
-import {getAllTenantsOfUserByUserId, getUserById} from "../lib/database";
-import {IUser} from "../interfaces/IUser";
-import {ITenant} from "../interfaces/ITenant";
-import {decodeToken} from "../middleware/decodeToken";
-import {verifyUser} from "../middleware/verifyUser";
-import logger from "../utils/logger";
+import {getAllTenantsOfUserByUserId, getUserById} from "../../lib/database";
+import {logRequests} from "../../middleware/logRequests";
+import {decodeToken} from "../../middleware/decodeToken";
+import {verifyUser} from "../../middleware/verifyUser";
+import {IUser} from "../../interfaces/IUser";
+import {ITenant} from "../../interfaces/ITenant";
+import User from "../../types/User";
+import {mapTenantToFrontend, mapUserToFrontend} from "../../utils/mapper";
+import Tenant from "../../types/Tenant";
+import logger from "../../utils/logger";
 import jwt from "jsonwebtoken";
-import {dev, JWT_REFRESH_SECRET} from "../lib/config";
-import {generateAccessToken, generateRefreshToken} from "../utils/generateToken";
-import {logRequests} from "../middleware/logRequests";
-import {mapTenantToFrontend, mapUserToFrontend} from "../utils/mapper";
-import User from "../types/User";
-import Tenant from "../types/Tenant";
+import {dev, JWT_REFRESH_SECRET} from "../../lib/config";
+import {generateAccessToken, generateRefreshToken} from "../../utils/generateToken";
 
 const authRouter: Router = Router();
 

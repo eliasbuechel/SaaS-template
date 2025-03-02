@@ -1,0 +1,31 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import {useEffect, useState} from "react";
+
+export default function ErrorPage() {
+    const searchParams = useSearchParams();
+    
+    const code = searchParams.get("code") || "500";
+    const message = searchParams.get("message") || "Something went wrong";
+    const details = searchParams.get("details") || "An unexpected error occurred. Please try again later.";
+    const timestampParam = searchParams.get("timestamp") || new Date().toISOString();
+    const path = searchParams.get("path") || "Unknown path";
+
+    const [formattedTimestamp, setFormattedTimestamp] = useState<string>("Loading...");
+
+    useEffect(() => {
+        setFormattedTimestamp(new Date(timestampParam).toLocaleString());
+    }, [timestampParam]);
+
+    return (
+        <div>
+            <h1>{code}: {message}</h1>
+            <p>{details}</p>
+            <p><strong>Timestamp:</strong> {new Date(formattedTimestamp).toLocaleString()}</p>
+            <p><strong>Path:</strong> {path}</p>
+            <Link href="/">Go back home</Link>
+        </div>
+    );
+}

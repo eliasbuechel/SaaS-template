@@ -3,7 +3,7 @@
 import React from "react";
 import Form from "next/form";
 import {useState} from "react";
-import {NEXT_PUBLIC_AUTH_SERVICE_URL} from "@/lib/config";
+import {NEXT_PUBLIC_AUTH_SERVICE_URL, NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL} from "@/lib/config";
 
 
 export default function ShopifyConnectForm() {
@@ -14,11 +14,11 @@ export default function ShopifyConnectForm() {
             return
         }
 
-        fetch(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/shopify/auth?shop=${encodeURIComponent(shopName)}`, {credentials: "include"})
+        fetch(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/shopify?shop=${encodeURIComponent(shopName)}&redirectUrlAfterAuth=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/dashboard&redirectUrlAfterError=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/error`, {credentials: "include"})
             .then(response => response.json())
             .then(data => {
                 if (data.redirectUrl) {
-                    window.location.href = data.redirectUrl; // ✅ Manually redirect after authentication
+                    window.location.href = data.redirectUrl;
                 } else {
                     console.error("Error: No redirect URL provided", data);
                 }
