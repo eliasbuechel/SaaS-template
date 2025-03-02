@@ -1,14 +1,14 @@
 import {Router, Request, Response} from "express";
-import {dev, SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, SHOPIFY_REDIRECT_URI} from "../../lib/config";
-import {decodeToken} from "../../middleware/decodeToken";
+import {SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, SHOPIFY_REDIRECT_URI} from "../../lib/config";
 import {verifyUser} from "../../middleware/verifyUser";
 import logger from "../../utils/logger";
 import {decryptSessionData, encryptSessionData, encryptToken, generateRandomString} from "../../utils/encryption";
 import {ITenant} from "../../interfaces/ITenant";
 import {getTenantByShopifyStoreDomainOrUpdate, getUserById} from "../../lib/database";
-import {generateAccessToken} from "../../utils/generateToken";
+import {constructAccessTokenData, generateAccessToken, setTokenOnResponse} from "../../utils/generateToken";
 import {logRequests} from "../../middleware/logRequests";
-import {handleErrorWithRedirect, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
+import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
+import {updateAccessTokenForTenant} from "./auth";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -35,7 +35,7 @@ const createEncryptedState = (userId: string, redirectUrlAfterAuth: string, redi
     return encryptSessionData(state);
 };
 
-shopifyAuthRouter.get("/", decodeToken, verifyUser, logRequests, (req: Request, res: Response): Promise<void> => {
+shopifyAuthRouter.get("/", verifyUser, logRequests, (req: Request, res: Response): Promise<void> => {
     const { shop, redirectUrlAfterAuth, redirectUrlAfterError } = req.query as {shop?: string, redirectUrlAfterAuth?: string, redirectUrlAfterError?: string };
 
     if (!shop) {
@@ -72,7 +72,7 @@ shopifyAuthRouter.get("/", decodeToken, verifyUser, logRequests, (req: Request, 
     res.json({ redirectUrl: authUrl });
 });
 
-shopifyAuthRouter.get('/oauth2callback' , async (req: Request, res: Response): Promise<void> => {
+shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: Response): Promise<void> => {
     const { shop, code, state } = req.query as { shop?: string; code?: string; state?: string };
 
     if (!state || !req.session.shopifyOAuthState) {
@@ -142,13 +142,12 @@ shopifyAuthRouter.get('/oauth2callback' , async (req: Request, res: Response): P
             throw new Error("Not able to retrieve User " + stateData.userId)
         }
         
-        const accessToken: string = generateAccessToken(user, tenant.id);
-        res.cookie("access_token", accessToken, { httpOnly: true, secure: !dev, sameSite: "lax" });
+        updateAccessTokenForTenant(res, user, tenant);
         
         logger.info(`Shopify store ${tenant.shopifyStoreDomain} connected for user ${user.email}`);
         res.redirect(stateData.redirectUrlAfterAuth);
     } catch (error) {
-        handleErrorWithRedirect(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
+        redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
     }
 });
 

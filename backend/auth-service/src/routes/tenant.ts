@@ -2,12 +2,12 @@ import express, {Request, Response, Router} from "express";
 import { verifyTenant } from "../middleware/verifyTenant";
 import {getTenantByUserId} from "../lib/database";
 import {ITenant} from "../interfaces/ITenant";
-import {decodeToken} from "../middleware/decodeToken";
 import {verifyUser} from "../middleware/verifyUser";
+import {logRequests} from "../middleware/logRequests";
 
 const tenantRouter: Router = express.Router();
 
-tenantRouter.get("/tenant", decodeToken, verifyUser,  verifyTenant, async (req: Request, res: Response): Promise<void> => {
+tenantRouter.get("/tenant", logRequests, verifyUser,  verifyTenant, async (req: Request, res: Response): Promise<void> => {
     try {
         const tenant: ITenant | null = await getTenantByUserId(req.user.id);
         if (!tenant) {

@@ -40,3 +40,11 @@ app.get('/', (req: Request, res: Response) => {
 app.listen(port, () => {
     logger.info(`Express is listening at http://localhost:${port} in ${NODE_ENV} mode`);
 });
+
+logger.error("Something went wrong!");
+logger.warn("This is a warning.");
+logger.info("Server started successfully.");
+logger.http("GET /api/auth/status");
+logger.verbose("Verbose details about processing.");
+logger.debug("Debugging details - useful for development.");
+logger.silly("Random low-priority message.");

@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "SaaS template",
-    description: "SaaS template project",
+    title: "SaaS template - customer-dashboard",
+    description: "SaaS template project - customer-dashboard",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,6 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
                 <Link href="/">Home</Link>
                 <Link href="/login">Login</Link>
+                <Link href="/connect-shopify">Connect shopify</Link>
             </nav>
         </header>
         <main>{children}</main>

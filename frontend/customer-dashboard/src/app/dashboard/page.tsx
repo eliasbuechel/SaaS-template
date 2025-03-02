@@ -6,6 +6,7 @@ import ShopifyConnectForm from "@/components/ShopifyConnectForm";
 import {Tenant} from "@/types/Tenant";
 import {fetchWithAuth} from "@/utils/auth";
 import {User} from "@/types/User";
+import log from "loglevel";
 
 
 function Dashboard() {
@@ -17,31 +18,20 @@ function Dashboard() {
         const fetchUserData = async () => {
             try {
                 const res = await fetchWithAuth(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/status`);
-                if (!res) return;
                 
-                if (res.status === 401) {
-                    window.location.href = "/login";
-                }
-
+                if (!res) return;
+                if (res.status === 401) window.location.href = "/login";
+                if (res.status === 403) window.location.href = "/connect-shopify";
+                
                 const data = await res.json();
-
-                if (!data.user) {
-                    window.location.href = "/login";
-                    return;
-                }
+                if (!data.user) log.error("No user provides from auth status")
 
                 setUser(data.user);
                 setTenants(data.tenants || []);
-                setSelectedTenant(data.tenant);
                 
+                if (data.tenant) setSelectedTenant(data.tenant);
+                else if (data.tenants.length > 0) setSelectedTenant(data.tenants[0]);
 
-                if (data.tenants) {
-                    setTenants(data.tenants);
-                    
-                    if (data.tenants.length > 0) {
-                        setSelectedTenant(data.tenants[0]);
-                    }
-                }
             } catch (error) {
                 console.error("Error fetching auth status:", error);
             }

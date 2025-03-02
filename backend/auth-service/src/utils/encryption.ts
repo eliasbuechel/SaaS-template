@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {ENCRYPTION_KEY} from "../lib/config";
+import logger from "./logger";
 
 const ALGORITHM = "aes-256-ctr";
 const IV_LENGTH = 16;
@@ -54,6 +55,7 @@ export function decryptSessionData(encryptedData: string): object {
 
         return JSON.parse(decrypted);
     } catch (error) {
+        logger.error("Decryption failed", error);
         throw new Error("Decryption failed: Invalid session data");
     }
 }

@@ -1,28 +1,72 @@
 import { Request, Response, NextFunction } from "express";
-import { getUserById } from "../lib/database";
-import { IUser } from "../interfaces/IUser";
 import logger from "../utils/logger";
+import {setResponseWithWarnLog} from "../utils/messageHandling";
+import {
+    AccessTokenData,
+    constructAccessTokenData, extractAccessTokenData,
+    extractRefreshTokenData,
+    generateAccessToken,
+    RefreshTokenData, setTokenOnResponse
+} from "../utils/generateToken";
+import {getTenantByUserId, getUserById, hasUserExactlyOneTenant} from "../lib/database";
 
 export const verifyUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    if (!req.decodedToken) {
-        logger.warn("Unauthorized access attempt - No token provided.");
-        res.status(401).json({ error: "Not authenticated" });
-        return;
-    }
-
-    try {
-        const user: IUser | null = await getUserById(req.decodedToken.id);
-        if (!user) {
-            logger.warn(`Authentication failed - User ${req.decodedToken.id} not found.`);
-            res.status(401).json({ error: "User not found" });
+    let accessToken: string = req.cookies["access_token"] as string;
+    const refreshToken: string = req.cookies["refresh_token"] as string;
+    
+    if (!accessToken) {
+        if (!refreshToken) {
+            setResponseWithWarnLog(res, 401, "Unauthorized", "No access or refresh token provided");
             return;
         }
 
-        req.user = user;
-        logger.info(`User verified: ${user.id} (${user.email})`);
-        next();
-    } catch (error) {
-        logger.error(`Error fetching user with ID ${req.decodedToken.id}: ${error.message}`, { stack: error.stack });
-        next(error);
+        const refreshTokenData: RefreshTokenData | null = extractRefreshTokenData(refreshToken);
+        if (!refreshTokenData) {
+            setResponseWithWarnLog(res, 401, "Unauthorized", "Invalid refresh token provided");
+            return;
+        }
+        
+        req.user = await getUserById(refreshTokenData.id);
+        if (!req.user) {
+            setResponseWithWarnLog(res, 401, "Unauthorized", "User not found based on the refresh token");
+            return;
+        }
+        
+        if (await hasUserExactlyOneTenant(req.user.id)) {
+            req.tenant = await getTenantByUserId(req.user.id);
+            accessToken = generateAccessToken(constructAccessTokenData(req.user, req.tenant.id))
+        } else {
+            accessToken = generateAccessToken(constructAccessTokenData(req.user))
+        }
+        
+        setTokenOnResponse(res, "access_token", accessToken);
     }
+    
+    if (!req.user) {
+        const accessTokenData: AccessTokenData | null = extractAccessTokenData(accessToken);
+        
+        if (!accessTokenData) {
+            setResponseWithWarnLog(res, 401, "Unauthorized", "Invalid access token provided");
+            return;
+        }
+        
+        req.user = await getUserById(accessTokenData.user.id);
+        
+        if (!req.user) {
+            setResponseWithWarnLog(res, 401, "Unauthorized", "User not found based on the access token");
+            return;
+        }
+        
+        if (!req.tenant && accessTokenData.tenantId) {
+            req.tenant = await getTenantByUserId(req.user.id);
+            
+            if (!req.tenant) {
+                setResponseWithWarnLog(res, 403, "Authorization failed", "Tenant not found based on the access token");
+                return;
+            }
+        }
+    }
+
+    logger.info(`Successfully verified user ${req.user.email} with JWT access token`);
+    next();
 };

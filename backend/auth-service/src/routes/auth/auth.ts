@@ -1,7 +1,6 @@
 import {Router, Request, Response} from "express";
 import {getAllTenantsOfUserByUserId, getUserById} from "../../lib/database";
 import {logRequests} from "../../middleware/logRequests";
-import {decodeToken} from "../../middleware/decodeToken";
 import {verifyUser} from "../../middleware/verifyUser";
 import {IUser} from "../../interfaces/IUser";
 import {ITenant} from "../../interfaces/ITenant";
@@ -11,34 +10,38 @@ import Tenant from "../../types/Tenant";
 import logger from "../../utils/logger";
 import jwt from "jsonwebtoken";
 import {dev, JWT_REFRESH_SECRET} from "../../lib/config";
-import {generateAccessToken, generateRefreshToken} from "../../utils/generateToken";
+import {
+    constructAccessTokenData,
+    generateAccessToken,
+    generateRefreshToken,
+    setTokenOnResponse
+} from "../../utils/generateToken";
+import {setResponseWithWarnLog} from "../../utils/messageHandling";
 
 const authRouter: Router = Router();
 
-authRouter.get('/status', logRequests, decodeToken, verifyUser, async (req: Request, res: Response): Promise<void> => {
-    try {
-        const userId = req.user?.id;
-        if (!userId) {
-            res.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-        
-        const user: IUser | null = await getUserById(userId);
-        if (!user) {
-            res.status(404).json({ error: "User not found" });
-            return;
-        }
+export const updateAccessTokenForTenant = (res: Response, user: IUser, tenant: ITenant): void => {
+    const accessToken: string = generateAccessToken(constructAccessTokenData(user, tenant.id));
+    setTokenOnResponse(res, "access_token", accessToken);
+}
 
-        const tenants: ITenant[] = await getAllTenantsOfUserByUserId(user.id);
+authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Response): Promise<void> => {
+    try {
+        const tenants: ITenant[] = await getAllTenantsOfUserByUserId(req.user.id);
         
-        let tenant: ITenant | null = null;
-        if (tenants.length === 1) {
-            tenant = tenants[0];
+        if (tenants.length === 0) {
+            setResponseWithWarnLog(res, 403, `No tenant for user ${req.user.email} found`)
+            return;
         }
         
-        const frontendUser: User = mapUserToFrontend(user)
+        if (!req.tenant) {
+            req.tenant = tenants[0];
+            updateAccessTokenForTenant(res, req.user, req.tenant);
+        }
+        
+        const frontendUser: User = mapUserToFrontend(req.user)
         const frontendTenants: Array<Tenant> = tenants.map(t => mapTenantToFrontend(t));
-        const frontendTenant: Tenant | null = tenant ? mapTenantToFrontend(tenant) : null;
+        const frontendTenant: Tenant | null = req.tenant ? mapTenantToFrontend(req.tenant) : null;
         
         res.json({ user: frontendUser, tenants: frontendTenants, tenant: frontendTenant });
     } catch (error) {
@@ -82,7 +85,7 @@ authRouter.post("/refresh", logRequests, async (req: Request, res: Response): Pr
             selectedTenantId = tenants[0].id;
         }
         
-        const newAccessToken = generateAccessToken(user, selectedTenantId);
+        const newAccessToken = generateAccessToken(constructAccessTokenData(user, selectedTenantId));
         const newRefreshToken = generateRefreshToken(user.id);
         
         res.cookie("access_token", newAccessToken, {httpOnly: true, secure: !dev, sameSite: "lax",});

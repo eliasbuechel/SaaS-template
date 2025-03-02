@@ -5,10 +5,5 @@ declare module "express-serve-static-core" {
     interface Request {
         user?: IUser;
         tenant?: ITenant;
-        decodedToken?: {
-            id: string;
-            email: string;
-            tenant_id?: string
-        }
     }
 }

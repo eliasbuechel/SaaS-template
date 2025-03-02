@@ -20,8 +20,6 @@ function getEnvOrDefault(key: string, defaultValue: string): string {
 
 export const NODE_ENV: string = getRequiredEnv('NODE_ENV');
 export const dev: boolean = NODE_ENV !== 'production';
-
-export const LOG_LEVEL: string = "debug" //getEnvOrDefault('LOG_LEVEL', "info");
 export const DATABASE_URL: string = getRequiredEnv('DATABASE_URL');
 export const JWT_SECRET: string = getRequiredEnv('JWT_SECRET');
 export const JWT_REFRESH_SECRET: string = getRequiredEnv('JWT_REFRESH_SECRET');

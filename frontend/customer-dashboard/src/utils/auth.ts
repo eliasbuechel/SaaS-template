@@ -1,7 +1,7 @@
 import { NEXT_PUBLIC_AUTH_SERVICE_URL } from "@/lib/config";
 
 export const fetchWithAuth = async (url: string, options = {}) => {
-    let response = await fetch(url, {
+    const response = await fetch(url, {
         ...options,
         credentials: "include",
     });

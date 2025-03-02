@@ -1,11 +1,17 @@
 import { Router, Request, Response } from "express";
 import {decryptSessionData, encryptSessionData, generateRandomString} from "../../utils/encryption";
-import {dev, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI} from "../../lib/config";
+import {GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI} from "../../lib/config";
 import logger from "../../utils/logger";
 import {addUserWithGoogleIdAndEmail, getUserByGoogleId} from "../../lib/database";
 import {IUser} from "../../interfaces/IUser";
-import {generateAccessToken, generateRefreshToken} from "../../utils/generateToken";
-import {handleErrorWithRedirect, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
+import {
+    constructAccessTokenData,
+    generateAccessToken,
+    generateRefreshToken,
+    setTokenOnResponse
+} from "../../utils/generateToken";
+import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
+import {logRequests} from "../../middleware/logRequests";
 
 declare module 'express-session' {
     interface SessionData {
@@ -35,7 +41,7 @@ const createEncryptedState = (redirectUrlAfterAuth: string, redirectUrlAfterErro
 
 const googleAuthRouter: Router = Router();
 
-googleAuthRouter.get("/", (req: Request, res: Response): void => {
+googleAuthRouter.get("/", logRequests, (req: Request, res: Response): void => {
     const { redirectUrlAfterAuth, redirectUrlAfterError } = req.query as { redirectUrlAfterAuth?: string, redirectUrlAfterError?: string };
     
     if (!redirectUrlAfterAuth) {
@@ -91,7 +97,7 @@ const getGoogleOAuth2UserInfo = async (googleOAuthAccessToken: string): Promise<
     return userInfo as UserInfo;
 }
 
-googleAuthRouter.get("/oauth2callback", async (req: Request, res: Response): Promise<void> => {
+googleAuthRouter.get("/oauth2callback", logRequests, async (req: Request, res: Response): Promise<void> => {
     const { code, state } = req.query as { code?: string; state?: string };
 
     try {
@@ -131,16 +137,16 @@ googleAuthRouter.get("/oauth2callback", async (req: Request, res: Response): Pro
         const userInfo: UserInfo = await getGoogleOAuth2UserInfo(googleOAuth2AccessToken);
         const user: IUser = await getUserByGoogleId(userInfo.sub) ?? await addUserWithGoogleIdAndEmail(userInfo.sub, userInfo.email)
         
-        let accessToken = generateAccessToken(user);
+        const accessToken = generateAccessToken(constructAccessTokenData(user));
         const refreshToken = generateRefreshToken(user.id);
 
-        res.cookie("access_token", accessToken, { httpOnly: true, secure: !dev, sameSite: "lax" });
-        res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: !dev, sameSite: "lax" });
+        setTokenOnResponse(res, "access_token", accessToken);
+        setTokenOnResponse(res, "refresh_token", refreshToken);
 
         logger.info(`User ${user.email} authenticated. Redirecting to ${stateData.redirectUrlAfterAuth}`);
         res.redirect(stateData.redirectUrlAfterAuth);
     } catch (error) {
-        handleErrorWithRedirect(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
+        redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
     }
 });
 

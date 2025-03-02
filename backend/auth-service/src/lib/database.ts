@@ -83,7 +83,7 @@ const queryLogger = async (query: string, params: any[]) => {
     }
 };
 
-const mapFirstUserFromQuery = (usersQueryResult: QueryResult<any>): IUser | null  => {
+const mapFirstUserFromQuery = (usersQueryResult: QueryResult): IUser | null  => {
     if (usersQueryResult.rows.length === 0) return null;
     
     return {
@@ -95,7 +95,7 @@ const mapFirstUserFromQuery = (usersQueryResult: QueryResult<any>): IUser | null
     };
 }
 
-const mapFirstTenantFromQuery = (tenantQueryResult: QueryResult<any>): ITenant | null  => {
+const mapFirstTenantFromQuery = (tenantQueryResult: QueryResult): ITenant | null  => {
     if (tenantQueryResult.rows.length === 0) return null;
 
     return {
@@ -108,8 +108,8 @@ const mapFirstTenantFromQuery = (tenantQueryResult: QueryResult<any>): ITenant |
     };
 }
 
-const mapAllTenantFromQuery = (tenantQueryResult: QueryResult<any>): Array<ITenant> => {
-    if (tenantQueryResult.rows.length === 0) return new Array<ITenant>();
+const mapAllTenantFromQuery = (tenantQueryResult: QueryResult): Array<ITenant> => {
+    if (tenantQueryResult.rows.length === 0) return [];
 
     return tenantQueryResult.rows.map(() => {
         return {
@@ -133,10 +133,21 @@ export const getTenantCountForUserByUserId = async (userId: string): Promise<num
     return parseInt(countResult.rows[0].count, 10);
 };
 
-export const getAllTenantsOfUserByUserId = async (userId: string): Promise<Array<ITenant> | null> => {
+export const getAllTenantsOfUserByUserId = async (userId: string): Promise<Array<ITenant>> => {
     const result = await queryLogger("SELECT * FROM tenants WHERE user_id = $1", [userId]);
     return mapAllTenantFromQuery(result);
 };
+
+export const hasUserExactlyOneTenant = async (userId: string): Promise<boolean> => {
+    try {
+        const result = await pool.query("SELECT COUNT(*) FROM tenants WHERE user_id = $1", [userId]);
+        const count = parseInt(result.rows[0].count, 10);
+        return count === 1;
+    } catch (error) {
+        logger.error(`Error checking tenant count for user ${userId}: ${error.message}`);
+        throw new Error("Database error while checking tenant count");
+    }
+}
 
 export const getUserByGoogleId = async (googleId: string): Promise<IUser | null> => {
     const result = await queryLogger("SELECT * FROM users WHERE google_id = $1", [googleId]);

@@ -11,7 +11,8 @@ export default function Login() {
             try {
                 const res = await fetchWithAuth(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/status`);
                 if (!res) return;
-                if (res.status === 401) return
+                if (res.status === 401) return;
+                if (res.status === 403) window.location.href = "/connect-shopify";
                 if (res.ok) window.location.href = "/dashboard";
             } catch (error) {
                 console.error("Error fetching auth status:", error);

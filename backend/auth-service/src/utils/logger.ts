@@ -1,7 +1,8 @@
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import { format } from "winston";
-import {LOG_LEVEL} from "../lib/config";
+
+const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
 const logFormat = format.combine(
     // format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
@@ -27,6 +28,8 @@ const logger = winston.createLogger({
     format: logFormat,
     transports,
 });
+
+logger.info("Log level is set to: ", LOG_LEVEL);
 
 logger.exceptions.handle(
     new winston.transports.File({ filename: "logs/exceptions.log" })
