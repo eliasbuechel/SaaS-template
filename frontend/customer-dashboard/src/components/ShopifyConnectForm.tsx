@@ -4,6 +4,7 @@ import React from "react";
 import Form from "next/form";
 import {useState} from "react";
 import {NEXT_PUBLIC_AUTH_SERVICE_URL, NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL} from "@/lib/config";
+import {fetchWithAuth} from "@/utils/auth";
 
 
 export default function ShopifyConnectForm() {
@@ -14,7 +15,7 @@ export default function ShopifyConnectForm() {
             return
         }
 
-        fetch(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/shopify?shop=${encodeURIComponent(shopName)}&redirectUrlAfterAuth=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/dashboard&redirectUrlAfterError=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/error`, {credentials: "include"})
+        fetchWithAuth(`${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/shopify?shop=${encodeURIComponent(shopName)}&redirectUrlAfterAuth=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/dashboard&redirectUrlAfterError=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/error`)
             .then(response => response.json())
             .then(data => {
                 if (data.redirectUrl) {

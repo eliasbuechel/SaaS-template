@@ -1,5 +1,5 @@
 import {Router, Request, Response} from "express";
-import {getAllTenantsOfUserByUserId, getUserById} from "../../lib/database";
+import {getAllTenantsOfUserByUserId} from "../../lib/database";
 import {logRequests} from "../../middleware/logRequests";
 import {verifyUser} from "../../middleware/verifyUser";
 import {IUser} from "../../interfaces/IUser";
@@ -8,12 +8,10 @@ import User from "../../types/User";
 import {mapTenantToFrontend, mapUserToFrontend} from "../../utils/mapper";
 import Tenant from "../../types/Tenant";
 import logger from "../../utils/logger";
-import jwt from "jsonwebtoken";
-import {dev, JWT_REFRESH_SECRET} from "../../lib/config";
 import {
     constructAccessTokenData,
     generateAccessToken,
-    generateRefreshToken,
+    setExpiredTokenOnResponse,
     setTokenOnResponse
 } from "../../utils/generateToken";
 import {setResponseWithWarnLog} from "../../utils/messageHandling";
@@ -50,55 +48,12 @@ authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Res
     }
 });
 
-authRouter.post("/refresh", logRequests, async (req: Request, res: Response): Promise<void> => {
-    const refreshToken = req.cookies["refresh_token"];
+authRouter.delete('/logout', async (req: Request, res: Response): Promise<void> => {
+    setExpiredTokenOnResponse(res, "access_token");
+    setExpiredTokenOnResponse(res, "refresh_token");
 
-    if (!refreshToken) {
-        logger.warn("Refresh token missing.");
-        res.status(401).json({ error: "Refresh token required" });
-        return;
-    }
-
-    try {
-        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { id: string; };
-
-        const user = await getUserById(decoded.id);
-        if (!user) {
-            logger.warn(`Refresh failed - User ${decoded.id} not found.`);
-            res.status(401).json({ error: "User not found" });
-            return
-        }
-        
-        const tenants: Array<ITenant> = await getAllTenantsOfUserByUserId(user.id);
-        const tenantId = req.body.tenant_id as string | undefined;
-        
-        let selectedTenantId: string | undefined = undefined;
-        if (tenantId) {
-            const tenantExists = tenants.some(tenant => tenant.id === tenantId);
-            if (!tenantExists) {
-                logger.warn(`Invalid tenant selection for user ${user.id}: ${tenantId}`);
-                res.status(403).json({ error: "Invalid tenant" });
-                return
-            }
-            selectedTenantId = tenantId;
-        } else if (tenants.length === 1) {
-            selectedTenantId = tenants[0].id;
-        }
-        
-        const newAccessToken = generateAccessToken(constructAccessTokenData(user, selectedTenantId));
-        const newRefreshToken = generateRefreshToken(user.id);
-        
-        res.cookie("access_token", newAccessToken, {httpOnly: true, secure: !dev, sameSite: "lax",});
-        res.cookie("refresh_token", newRefreshToken, {httpOnly: true, secure: !dev, sameSite: "lax",});
-
-        logger.info(`Token refreshed successfully for user ${user.id}. Selected tenant: ${selectedTenantId ?? "None"}`);
-
-        const frontendTenants = tenants.map(t => mapTenantToFrontend(t));
-        res.json({accessToken: newAccessToken, tenants: frontendTenants});
-    } catch (error) {
-        logger.warn(`Refresh token verification failed: ${error.message}`);
-        res.status(403).json({ error: "Invalid or expired refresh token" });
-    }
+    logger.info("User logged out, tokens expired.");
+    res.status(200).json({ message: "Logged out successfully" });
 });
 
 export default authRouter;

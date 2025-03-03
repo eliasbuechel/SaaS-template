@@ -4,11 +4,17 @@ import {verifyUser} from "../../middleware/verifyUser";
 import logger from "../../utils/logger";
 import {decryptSessionData, encryptSessionData, encryptToken, generateRandomString} from "../../utils/encryption";
 import {ITenant} from "../../interfaces/ITenant";
-import {getTenantByShopifyStoreDomainOrUpdate, getUserById} from "../../lib/database";
+import {
+    getTenantByShopifyStoreDomainOrUpdate,
+    getFirstTenantByUserId,
+    getUserById,
+    containsTenantForUserByTenantId
+} from "../../lib/database";
 import {constructAccessTokenData, generateAccessToken, setTokenOnResponse} from "../../utils/generateToken";
 import {logRequests} from "../../middleware/logRequests";
 import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
 import {updateAccessTokenForTenant} from "./auth";
+import {verifyTenant} from "../../middleware/verifyTenant";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -150,5 +156,30 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
         redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
     }
 });
+
+shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
+    const { tenantId } = req.body as { tenantId?: string };
+
+    if (!tenantId) {
+        setResponseWithWarnLog(res, 400, "No tenant id provided", "Missing tenantId parameter in request");
+        return;
+    }
+
+    logger.debug("Valid tenant id to switch", tenantId);
+    const tenantExists = await containsTenantForUserByTenantId(req.user.id, tenantId);
+
+    logger.debug("Tenant exists", tenantExists);
+    if (!tenantExists) {
+        setResponseWithErrorLog(res, 400, "User does not own the specified tenant");
+        return;
+    }
+    
+    const accessToken = generateAccessToken(constructAccessTokenData(req.user, tenantId));
+    setTokenOnResponse(res, "access_token", accessToken)
+
+    logger.debug("Access token generated and set");
+
+    res.status(200).json({ success: true, tenantId: tenantId });
+})
 
 export default shopifyAuthRouter;

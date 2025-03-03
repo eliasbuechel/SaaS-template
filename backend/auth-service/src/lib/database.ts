@@ -37,7 +37,7 @@ const initializeDatabase = async () => {
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 shopify_store_domain TEXT UNIQUE NOT NULL,
                 shopify_access_token TEXT NOT NULL,
-                user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE, -- 1:1 Relationship for now
+                user_id UUID REFERENCES users(id) ON DELETE CASCADE,
                 created_at TIMESTAMP DEFAULT now(),
                 updated_at TIMESTAMP DEFAULT now()
             );
@@ -111,21 +111,27 @@ const mapFirstTenantFromQuery = (tenantQueryResult: QueryResult): ITenant | null
 const mapAllTenantFromQuery = (tenantQueryResult: QueryResult): Array<ITenant> => {
     if (tenantQueryResult.rows.length === 0) return [];
 
-    return tenantQueryResult.rows.map(() => {
+    return tenantQueryResult.rows.map<ITenant>(t => {
         return {
-            id: tenantQueryResult.rows[0].id,
-            shopifyStoreDomain: tenantQueryResult.rows[0].shopify_store_domain,
-            shopifyAccessToken: tenantQueryResult.rows[0].shopify_access_token,
-            userId: tenantQueryResult.rows[0].user_id,
-            createdAt: tenantQueryResult.rows[0].created_at,
-            updatedAt: tenantQueryResult.rows[0].updated_at
+            id: t.id,
+            shopifyStoreDomain: t.shopify_store_domain,
+            shopifyAccessToken: t.shopify_access_token,
+            userId: t.user_id,
+            createdAt: t.created_at,
+            updatedAt: t.updated_at
         };
     })
 }
 
-export const getTenantByUserId = async (userId: string): Promise<ITenant | null> => {
+export const getFirstTenantByUserId = async (userId: string): Promise<ITenant | null> => {
     const result = await queryLogger("SELECT * FROM tenants WHERE user_id = $1", [userId]);
     return mapFirstTenantFromQuery(result);
+};
+
+export const containsTenantForUserByTenantId = async (userId: string, tenantId: string): Promise<boolean> => {
+    const result = await queryLogger("SELECT COUNT(*)::int AS count FROM tenants WHERE user_id = $1 AND id = $2", [userId, tenantId]);
+    const count = parseInt(result.rows[0].count, 10) ?? 0;
+    return count > 0;
 };
 
 export const getTenantCountForUserByUserId = async (userId: string): Promise<number> => {

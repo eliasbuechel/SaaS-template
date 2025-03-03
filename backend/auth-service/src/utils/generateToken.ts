@@ -57,3 +57,8 @@ export const setTokenOnResponse = (res: Response, tokenName: string, token: stri
     res.cookie(tokenName, token, { httpOnly: true, secure: !dev, sameSite: "lax" });
     logger.info(`Adding or updating ${tokenName}`);
 }
+
+export const setExpiredTokenOnResponse = (res: Response, tokenName: string) => {
+    res.cookie(tokenName, "", { httpOnly: true, secure: !dev, sameSite: "lax", expires: new Date(0), path: "/" });
+    logger.info(`Token ${tokenName} has been expired and removed.`);
+}

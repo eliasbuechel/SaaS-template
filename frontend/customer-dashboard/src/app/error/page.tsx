@@ -3,8 +3,11 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {useEffect, useState} from "react";
+import {useAuth} from "@/context/AuthContext";
 
 export default function ErrorPage() {
+    const {user, tenant} = useAuth()
+    
     const searchParams = useSearchParams();
     
     const code = searchParams.get("code") || "500";
@@ -26,6 +29,8 @@ export default function ErrorPage() {
             <p><strong>Timestamp:</strong> {new Date(formattedTimestamp).toLocaleString()}</p>
             <p><strong>Path:</strong> {path}</p>
             <Link href="/">Go back home</Link>
+            {user && <p><strong>User:</strong> {user.email}</p>}
+            {tenant && <p><strong>Tenant:</strong> {tenant.shopifyStoreDomain}</p>}
         </div>
     );
 }

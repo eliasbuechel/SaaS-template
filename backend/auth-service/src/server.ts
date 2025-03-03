@@ -10,6 +10,10 @@ import logger from "./utils/logger";
 const app: Application = express();
 const port: number = 4000;
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
 app.use(
     session({
         secret: SESSION_SECRET,
@@ -24,7 +28,8 @@ app.use(cors({
     origin: ALLOWED_CORS_ORIGIN,
     credentials: true,
 }));
-app.use(cookieParser());
+
+
 app.use('/api', router);
 
 connect()
@@ -40,11 +45,3 @@ app.get('/', (req: Request, res: Response) => {
 app.listen(port, () => {
     logger.info(`Express is listening at http://localhost:${port} in ${NODE_ENV} mode`);
 });
-
-logger.error("Something went wrong!");
-logger.warn("This is a warning.");
-logger.info("Server started successfully.");
-logger.http("GET /api/auth/status");
-logger.verbose("Verbose details about processing.");
-logger.debug("Debugging details - useful for development.");
-logger.silly("Random low-priority message.");

@@ -1,5 +1,7 @@
+import log from "../utils/logger"
+
 function envIsMissing(key: string): undefined {
-    console.error(`Error: ${key} environment variable must be defined!`);
+    log.error(`Error: ${key} environment variable must be defined!`);
     return undefined
 }
 

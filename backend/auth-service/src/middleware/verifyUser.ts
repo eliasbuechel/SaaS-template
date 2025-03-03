@@ -8,7 +8,7 @@ import {
     generateAccessToken,
     RefreshTokenData, setTokenOnResponse
 } from "../utils/generateToken";
-import {getTenantByUserId, getUserById, hasUserExactlyOneTenant} from "../lib/database";
+import {getFirstTenantByUserId, getUserById, hasUserExactlyOneTenant} from "../lib/database";
 
 export const verifyUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     let accessToken: string = req.cookies["access_token"] as string;
@@ -33,7 +33,7 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
         }
         
         if (await hasUserExactlyOneTenant(req.user.id)) {
-            req.tenant = await getTenantByUserId(req.user.id);
+            req.tenant = await getFirstTenantByUserId(req.user.id);
             accessToken = generateAccessToken(constructAccessTokenData(req.user, req.tenant.id))
         } else {
             accessToken = generateAccessToken(constructAccessTokenData(req.user))
@@ -58,7 +58,7 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
         }
         
         if (!req.tenant && accessTokenData.tenantId) {
-            req.tenant = await getTenantByUserId(req.user.id);
+            req.tenant = await getFirstTenantByUserId(req.user.id);
             
             if (!req.tenant) {
                 setResponseWithWarnLog(res, 403, "Authorization failed", "Tenant not found based on the access token");

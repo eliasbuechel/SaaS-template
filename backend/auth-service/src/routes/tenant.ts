@@ -1,25 +1,28 @@
 import express, {Request, Response, Router} from "express";
 import { verifyTenant } from "../middleware/verifyTenant";
-import {getTenantByUserId} from "../lib/database";
-import {ITenant} from "../interfaces/ITenant";
 import {verifyUser} from "../middleware/verifyUser";
 import {logRequests} from "../middleware/logRequests";
+import {mapTenantToFrontend} from "../utils/mapper";
+import Tenant from "../types/Tenant";
+import {getAllTenantsOfUserByUserId} from "../lib/database";
+import {setResponseWithErrorLog} from "../utils/messageHandling";
+import {ITenant} from "../interfaces/ITenant";
 
 const tenantRouter: Router = express.Router();
 
-tenantRouter.get("/tenant", logRequests, verifyUser,  verifyTenant, async (req: Request, res: Response): Promise<void> => {
+tenantRouter.get("/", logRequests, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
+    const tenant: Tenant = mapTenantToFrontend(req.tenant)
+    res.json(tenant);
+});
+
+tenantRouter.get("/all", logRequests, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
     try {
-        const tenant: ITenant | null = await getTenantByUserId(req.user.id);
-        if (!tenant) {
-            res.status(404).json({ error: "No Shopify store connected." });
-            return
-        }
-        res.json(tenant);
+        const queriedTenants: Array<ITenant> = await getAllTenantsOfUserByUserId(req.user.id);
+        const tenants: Array<Tenant> = queriedTenants.map<Tenant>(t => mapTenantToFrontend(t))
+        res.json(tenants);
     } catch (error) {
-        console.error("Error fetching tenant:", error);
-        res.status(500).json({ error: "Internal server error" });
+        setResponseWithErrorLog(res, 500, "Internal server error", "Error while loading tenants", error);
     }
 });
 
 export default tenantRouter;
-
