@@ -1,17 +1,16 @@
 import { Router, Request, Response } from "express";
-import {decryptSessionData, encryptSessionData, generateRandomString} from "../../utils/encryption";
 import {GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI} from "../../lib/config";
 import logger from "../../utils/logger";
-import {addUserWithGoogleIdAndEmail, getUserByGoogleId} from "../../lib/database";
 import {IUser} from "../../interfaces/IUser";
+import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
+import {logRequests} from "../../middleware/logRequests";
+import {decryptSessionData, encryptSessionData, generateRandomString} from "../../lib/encryption";
+import {createUser, getUserByGoogleId} from "../../lib/database/userRepo";
 import {
-    constructAccessTokenData,
     generateAccessToken,
     generateRefreshToken,
     setTokenOnResponse
-} from "../../utils/generateToken";
-import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
-import {logRequests} from "../../middleware/logRequests";
+} from "../../lib/generateToken";
 
 declare module 'express-session' {
     interface SessionData {
@@ -135,9 +134,9 @@ googleAuthRouter.get("/oauth2callback", logRequests, async (req: Request, res: R
         }
 
         const userInfo: UserInfo = await getGoogleOAuth2UserInfo(googleOAuth2AccessToken);
-        const user: IUser = await getUserByGoogleId(userInfo.sub) ?? await addUserWithGoogleIdAndEmail(userInfo.sub, userInfo.email)
+        const user: IUser = await getUserByGoogleId(userInfo.sub) ?? await createUser(userInfo.sub, userInfo.email)
         
-        const accessToken = generateAccessToken(constructAccessTokenData(user));
+        const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user.id);
 
         setTokenOnResponse(res, "access_token", accessToken);

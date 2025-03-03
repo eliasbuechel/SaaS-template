@@ -1,31 +1,30 @@
 import {Router, Request, Response} from "express";
-import {getAllTenantsOfUserByUserId} from "../../lib/database";
 import {logRequests} from "../../middleware/logRequests";
 import {verifyUser} from "../../middleware/verifyUser";
 import {IUser} from "../../interfaces/IUser";
 import {ITenant} from "../../interfaces/ITenant";
 import User from "../../types/User";
-import {mapTenantToFrontend, mapUserToFrontend} from "../../utils/mapper";
 import Tenant from "../../types/Tenant";
 import logger from "../../utils/logger";
+import {setResponseWithWarnLog} from "../../utils/messageHandling";
 import {
-    constructAccessTokenData,
     generateAccessToken,
     setExpiredTokenOnResponse,
     setTokenOnResponse
-} from "../../utils/generateToken";
-import {setResponseWithWarnLog} from "../../utils/messageHandling";
+} from "../../lib/generateToken";
+import {getAllTenants} from "../../lib/database/tenantRepo";
+import {mapTenantToFrontend, mapUserToFrontend} from "../../lib/mapper";
 
 const authRouter: Router = Router();
 
 export const updateAccessTokenForTenant = (res: Response, user: IUser, tenant: ITenant): void => {
-    const accessToken: string = generateAccessToken(constructAccessTokenData(user, tenant.id));
+    const accessToken: string = generateAccessToken(user, tenant.id);
     setTokenOnResponse(res, "access_token", accessToken);
 }
 
 authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Response): Promise<void> => {
     try {
-        const tenants: ITenant[] = await getAllTenantsOfUserByUserId(req.user.id);
+        const tenants: ITenant[] = await getAllTenants(req.user.id);
         
         if (tenants.length === 0) {
             setResponseWithWarnLog(res, 403, `No tenant for user ${req.user.email} found`)

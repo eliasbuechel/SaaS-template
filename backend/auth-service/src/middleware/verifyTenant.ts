@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { getFirstTenantByUserId } from "../lib/database";
 import logger from "../utils/logger";
-import {setResponseWithErrorLog} from "../utils/messageHandling";
+import {setResponseWithErrorLog, setResponseWithWarnLog} from "../utils/messageHandling";
+import {getLastUpdatedTenant} from "../lib/database/tenantRepo";
 
 export const verifyTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
@@ -10,10 +10,16 @@ export const verifyTenant = async (req: Request, res: Response, next: NextFuncti
     }
     
     if (!req.tenant) {
-        req.tenant = await getFirstTenantByUserId(req.user.id);
+        try {
+            req.tenant = await getLastUpdatedTenant(req.user.id);
+        } catch (error) {
+            logger.error(`Error defaulting to last updated shopify store`, error);
+            setResponseWithWarnLog(res, 403, "Error while getting last updated tenant");
+            return;
+        }
         
         if (!req.tenant) {
-            res.status(403).json({ error: "Not connected to Shopify store or not selected a specific store"});
+            setResponseWithWarnLog(res, 403, "No shopify store to default to");
             return;
         }
     }

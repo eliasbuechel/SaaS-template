@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import {ENCRYPTION_KEY} from "../lib/config";
-import logger from "./logger";
+import logger from "../utils/logger";
 
 const ALGORITHM = "aes-256-ctr";
 const IV_LENGTH = 16;

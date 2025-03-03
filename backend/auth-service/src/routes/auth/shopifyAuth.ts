@@ -2,19 +2,15 @@ import {Router, Request, Response} from "express";
 import {SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, SHOPIFY_REDIRECT_URI} from "../../lib/config";
 import {verifyUser} from "../../middleware/verifyUser";
 import logger from "../../utils/logger";
-import {decryptSessionData, encryptSessionData, encryptToken, generateRandomString} from "../../utils/encryption";
 import {ITenant} from "../../interfaces/ITenant";
-import {
-    getTenantByShopifyStoreDomainOrUpdate,
-    getFirstTenantByUserId,
-    getUserById,
-    containsTenantForUserByTenantId
-} from "../../lib/database";
-import {constructAccessTokenData, generateAccessToken, setTokenOnResponse} from "../../utils/generateToken";
 import {logRequests} from "../../middleware/logRequests";
 import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
 import {updateAccessTokenForTenant} from "./auth";
 import {verifyTenant} from "../../middleware/verifyTenant";
+import {decryptSessionData, encryptSessionData, encryptToken, generateRandomString} from "../../lib/encryption";
+import {existsTenantByTenantId, createOrUpdateTenant} from "../../lib/database/tenantRepo";
+import {getUser} from "../../lib/database/userRepo";
+import {generateAccessToken, setTokenOnResponse} from "../../lib/generateToken";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -137,13 +133,13 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
         }
 
         const encryptedShopifyAccessToken = encryptToken(data.access_token);
-        const tenant: ITenant = await getTenantByShopifyStoreDomainOrUpdate(shop, encryptedShopifyAccessToken, stateData.userId);
+        const tenant: ITenant = await createOrUpdateTenant(stateData.userId, shop, encryptedShopifyAccessToken);
 
         if (!tenant) {
             throw new Error("Not able to retrieve tenant for the shop " + shop)
         }
 
-        const user = await getUserById(stateData.userId);
+        const user = await getUser(stateData.userId);
         if (!user) {
             throw new Error("Not able to retrieve User " + stateData.userId)
         }
@@ -166,7 +162,7 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
     }
 
     logger.debug("Valid tenant id to switch", tenantId);
-    const tenantExists = await containsTenantForUserByTenantId(req.user.id, tenantId);
+    const tenantExists = await existsTenantByTenantId(req.user.id, tenantId);
 
     logger.debug("Tenant exists", tenantExists);
     if (!tenantExists) {
@@ -174,7 +170,7 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
         return;
     }
     
-    const accessToken = generateAccessToken(constructAccessTokenData(req.user, tenantId));
+    const accessToken = generateAccessToken(req.user, tenantId);
     setTokenOnResponse(res, "access_token", accessToken)
 
     logger.debug("Access token generated and set");

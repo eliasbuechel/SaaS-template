@@ -3,7 +3,7 @@ import tenantRouter from "./tenant";
 import shopifyAuthRouter from "./auth/shopifyAuth";
 import googleAuthRouter from "./auth/googleAuth";
 import authRouter from "./auth/auth";
-import userRouter from "./urser";
+import userRouter from "./user";
 
 const router: Router = Router();
 
