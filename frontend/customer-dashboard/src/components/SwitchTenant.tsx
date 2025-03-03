@@ -6,6 +6,8 @@ import {useAuth} from "@/context/AuthContext";
 export default function SwitchTenant() {
     const { tenant, tenants, switchTenant } = useAuth();
     
+    if (!tenant) return <p>No shop connected yet</p>
+    
     return (
         <div>
             <label htmlFor="tenant-select">Select Shopify Store:</label>

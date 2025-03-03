@@ -64,7 +64,8 @@ googleAuthRouter.get("/", logRequests, (req: Request, res: Response): void => {
         `&response_type=code` +
         `&scope=${encodeURIComponent(scopes.join(' '))}` +
         `&state=${encodeURIComponent(encryptedState)}` +
-        `&access_type=offline`;
+        `&access_type=offline` +
+        `&prompt=select_account`;
 
     console.log('Redirecting to Google OAuth URL: ', authUrl);
     res.redirect(authUrl);
