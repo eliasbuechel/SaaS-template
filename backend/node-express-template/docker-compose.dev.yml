@@ -1,0 +1,7 @@
+services:
+  server-template:
+    build:
+      context: .
+      args:
+        NODE_ENV: development
+    command: ["yarn", "dev"]
