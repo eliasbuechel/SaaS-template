@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import {ENCRYPTION_KEY} from "../lib/config";
+import {ENCRYPTION_KEY} from "./config";
 import logger from "../utils/logger";
 
 const ALGORITHM = "aes-256-ctr";
