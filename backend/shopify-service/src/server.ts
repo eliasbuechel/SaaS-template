@@ -1,8 +1,7 @@
 import cors from "cors";
 import http from "http";
 import helmet from "helmet";
-import express from "express";
-import {Application} from "express";
+import express, {Application} from "express";
 import session from "express-session";
 import compression from "compression";
 import cookieParser from "cookie-parser";
@@ -41,7 +40,7 @@ const sessionOptions: session.SessionOptions = {
         secure: !DEV,
         maxAge: 1000 * 60 * 60,
     },
-}
+};
 
 if (!DEV) {
     connectToRedis();

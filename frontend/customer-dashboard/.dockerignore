@@ -1,0 +1,31 @@
+# Ignore dependencies (they are installed in the image)
+node_modules
+npm-debug.log
+
+# Ignore Docker-related files
+Dockerfile
+Dockerfile.*
+.dockerignore
+
+# Ignore Git & VCS files
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+
+# Ignore environment and secrets files
+.env
+.env.local
+.env.*
+
+# Ignore build artifacts
+build
+dist
+.cache
+.eslintcache
+
+# Ignore logs & temporary files
+*.log
+logs
+tmp

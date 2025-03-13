@@ -1,8 +1,6 @@
 "use client";
 
-import ShopifyConnectForm from "@/components/ShopifyConnectForm";
 import {useAuth} from "@/context/AuthContext";
-import SwitchTenant from "@/components/SwitchTenant";
 
 
 function Dashboard() {

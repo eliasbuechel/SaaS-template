@@ -4,28 +4,31 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--inspect' next dev",
-    "start": "next build && next start",
-    "lint": "next lint"
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "clean": "rm -rf dist .turbo logs node_modules .eslintcache .next && yarn cache clean"
   },
   "dependencies": {
+    "loglevel": "^1.9.2",
     "next": "15.1.7",
+    "postcss": "^8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "loglevel": "^1.9.2"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9.21.0",
-    "eslint-config-next": "15.1.7",
-    "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "5.7.3"
   },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "^19",
+    "eslint": "^9.21.0",
+    "eslint-config-next": "15.1.7"
+  },
   "optionalDependencies": {
-    "@next/swc-linux-arm64-musl": "^15.1.17",
-    "@next/swc-darwin-arm64": "^15.1.17"
-  }
+    "@next/swc-darwin-arm64": "^15.1.17",
+    "@next/swc-linux-arm64-musl": "^15.1.17"
+  },
+  "packageManager": "yarn@4.7.0+sha512.5a0afa1d4c1d844b3447ee3319633797bcd6385d9a44be07993ae52ff4facabccafb4af5dcd1c2f9a94ac113e5e9ff56f6130431905884414229e284e37bb7c9"
 }

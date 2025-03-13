@@ -1,0 +1,7 @@
+services:
+  shopify-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev.dockerfile
+    environment:
+      - NODE_ENV=development
