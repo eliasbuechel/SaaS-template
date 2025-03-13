@@ -29,7 +29,7 @@ const logger = winston.createLogger({
     transports,
 });
 
-logger.info("Log level is set to: ", LOG_LEVEL);
+logger.info(`Log level is set to: ${LOG_LEVEL}`);
 
 logger.exceptions.handle(
     new winston.transports.File({ filename: "logs/exceptions.log" })

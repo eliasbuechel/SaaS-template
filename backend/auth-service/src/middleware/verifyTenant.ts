@@ -5,7 +5,7 @@ import {getLastUpdatedTenant} from "../lib/database/tenantRepo";
 
 export const verifyTenant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
-        setResponseWithErrorLog(res, 401, "User authentication required", "Unauthorized access attempt - No user in request.")
+        setResponseWithErrorLog(res, 401, "User authentication required", "Unauthorized access attempt - No user in request.");
         return;
     }
     

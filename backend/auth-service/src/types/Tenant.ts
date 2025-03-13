@@ -3,4 +3,4 @@ export default interface Tenant {
     shopifyStoreDomain: string;
     createdAt: string;
     updatedAt?: string;
-}
+};

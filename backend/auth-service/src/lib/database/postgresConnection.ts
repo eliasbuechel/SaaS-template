@@ -1,25 +1,25 @@
 import pg from 'pg';
-import {DATABASE_URL} from "../config";
 import logger from "../../utils/logger";
+import ENV from "../config/env";
 
-const { Pool, Client } = pg
-const connectionString = DATABASE_URL
+const { Pool, Client } = pg;
+const connectionString = ENV.POSTGRES_DATABASE_URL;
 
 const pool = new Pool({
     connectionString,
-})
+});
 
 const getClient = async () => {
     const client = new Client({ connectionString });
     await client.connect();
-    logger.info("Database client connected");
+    logger.info("Postgres database client connected");
     return client;
 };
 
 const initializeDatabase = async () => {
     const client = await getClient();
     try {
-        logger.info("Initializing database...");
+        logger.info("Initializing postgres database...");
         const start: number = Date.now();
 
         await client.query(`
@@ -42,28 +42,28 @@ const initializeDatabase = async () => {
         `);
 
         const timeTaken: number = Date.now() - start;
-        logger.info(`Database initialized successfully in ${timeTaken}ms`);
+        logger.info(`Postgres database initialized successfully in ${timeTaken}ms`);
     } catch (error) {
-        logger.error("Error initializing database:", error);
+        logger.error("Error initializing postgres database:", error);
         throw error;
     } finally {
         await client.end();
-        logger.info("Database client connection closed");
+        logger.info("Postgres database client connection closed");
     }
 };
 
-export const connect = async () => {
+export const connectToPostgresDb = async () => {
     try {
         const start = Date.now();
 
         const res = await pool.query("SELECT NOW()");
-        logger.info(`Database connected at: ${res.rows[0].now}`);
-        await initializeDatabase()
+        logger.info(`Postgres database connected at: ${res.rows[0].now}`);
+        await initializeDatabase();
 
         const timeTaken = Date.now() - start;
-        logger.info(`Database connection and setup completed in ${timeTaken}ms`);
+        logger.info(`Postgres database connection and setup completed in ${timeTaken}ms`);
     } catch (error) {
-        logger.error("Database connection error:", error);
+        logger.error("Postgres database connection error:", error);
         throw error;
     }
 };

@@ -4,8 +4,7 @@ services:
     container_name: auth-service
     build:
       context: ../../backend/auth-service
-      args:
-        NODE_ENV: development
+      dockerfile: ../../backend/auth-service/Dockerfile.dev.dockerfile
     env_file:
       - ../../backend/auth-service/.env
     ports:
@@ -16,7 +15,6 @@ services:
     networks:
       - auth-service-network
       - customer-dashboard-network
-    command: ["yarn", "dev"]
         
   auth-service-db-postgres:
     image: postgres:14
