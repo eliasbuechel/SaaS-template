@@ -6,11 +6,19 @@ import {logRequests} from "../../middleware/logRequests";
 import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
 import {updateAccessTokenForTenant} from "./auth";
 import {verifyTenant} from "../../middleware/verifyTenant";
-import {decryptSessionData, encryptSessionData, encryptToken, generateRandomString} from "../../lib/encryption";
+import {
+    decryptSessionData,
+    decryptToken,
+    encryptSessionData,
+    encryptToken,
+    generateRandomString
+} from "../../lib/encryption";
 import {existsTenantByTenantId, createOrUpdateTenant} from "../../lib/database/tenantRepo";
 import {getUser} from "../../lib/database/userRepo";
 import {generateAccessToken, setTokenOnResponse} from "../../lib/generateToken";
 import ENV from "../../lib/config/env";
+import Shopify from "shopify-api-node";
+import {verifyInternal} from "../../middleware/verifyInternal";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -176,6 +184,12 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
     logger.debug("Access token generated and set");
 
     res.status(200).json({ success: true, tenantId: tenantId });
+});
+
+shopifyAuthRouter.get('/credentials', logRequests, verifyInternal, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
+    const shopifyStoreDomain: string = req.tenant.shopifyStoreDomain;
+    const shopifyAccessToken: string = decryptToken(req.tenant.shopifyAccessToken);
+    res.json({storeDomain: shopifyStoreDomain, accessToken: shopifyAccessToken});
 });
 
 export default shopifyAuthRouter;

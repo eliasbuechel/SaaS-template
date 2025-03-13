@@ -1,5 +1,6 @@
 import {Router, Request, Response} from "express";
 import logger from "../utils/logger.js";
+import ENV from "../lib/config/env.js";
 
 const shopifyRouter: Router = Router();
 
@@ -12,7 +13,8 @@ shopifyRouter.get('/orders', async (req: Request, res: Response) => {
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "Cookie": cookies || ""
+                "Cookie": cookies || "",
+                "Authorization": `Bearer ${ENV.INTERNAL_AUTH_COMMUNICATION_SECRET}`
             }
         });
         
