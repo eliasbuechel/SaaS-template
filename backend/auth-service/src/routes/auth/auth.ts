@@ -20,14 +20,14 @@ const authRouter: Router = Router();
 export const updateAccessTokenForTenant = (res: Response, user: IUser, tenant: ITenant): void => {
     const accessToken: string = generateAccessToken(user, tenant.id);
     setTokenOnResponse(res, "access_token", accessToken);
-}
+};
 
 authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Response): Promise<void> => {
     try {
         const tenants: ITenant[] = await getAllTenants(req.user.id);
         
         if (tenants.length === 0) {
-            setResponseWithWarnLog(res, 403, `No tenant for user ${req.user.email} found`)
+            setResponseWithWarnLog(res, 403, `No tenant for user ${req.user.email} found`);
             return;
         }
         
@@ -36,7 +36,7 @@ authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Res
             updateAccessTokenForTenant(res, req.user, req.tenant);
         }
         
-        const frontendUser: User = mapUserToFrontend(req.user)
+        const frontendUser: User = mapUserToFrontend(req.user);
         const frontendTenants: Array<Tenant> = tenants.map(t => mapTenantToFrontend(t));
         const frontendTenant: Tenant | null = req.tenant ? mapTenantToFrontend(req.tenant) : null;
         

@@ -7,11 +7,11 @@ import userRouter from "./user";
 
 const router: Router = Router();
 
-router.use('/auth', authRouter)
-router.use('/auth/shopify', shopifyAuthRouter)
-router.use('/auth/google', googleAuthRouter)
-router.use('/tenant', tenantRouter)
-router.use('/user', userRouter)
+router.use('/auth', authRouter);
+router.use('/auth/shopify', shopifyAuthRouter);
+router.use('/auth/google', googleAuthRouter);
+router.use('/tenant', tenantRouter);
+router.use('/user', userRouter);
 
 router.get('/', (req: Request, res: Response) => {
     res.send('Hello from the router!');

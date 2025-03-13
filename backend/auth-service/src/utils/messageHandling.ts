@@ -49,4 +49,4 @@ export const redirectToErrorPage = (req: Request, res: Response, redirectUrlAfte
     logger.error(message, error);
 const redirectUrl = `${redirectUrlAfterError}?code=${code}&message=${message}&details=${error.message}&timestamp=${Date().toString()}&path=${req.originalUrl}`;
     res.redirect(redirectUrl);
-}
+};

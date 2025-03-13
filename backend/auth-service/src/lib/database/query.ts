@@ -1,7 +1,7 @@
-import {pool} from "./connection";
+import {pool} from "./postgresConnection";
 import logger from "../../utils/logger";
 
-export const queryLogger = async (query: string, params: any[]) => {
+export const queryLogger = async (query: string, params: (string | number | boolean | null)[]) => {
     const start = Date.now();
     try {
         const result = await pool.query(query, params);

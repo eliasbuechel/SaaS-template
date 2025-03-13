@@ -1,0 +1,65 @@
+services:
+  auth-service:
+    image: auth-service
+    container_name: auth-service
+    build: 
+     context: .
+     dockerfile: Dockerfile.dev.dockerfile
+    env_file:
+      - ./.env
+    ports:
+      - "4000:4000"
+    networks:
+      - auth-service-redis-db-network
+      - auth-service-postgres-db-network
+    depends_on:
+      auth-service-postgres-db:
+        condition: service_healthy
+      auth-service-redis-db:
+        condition: service_healthy
+
+  auth-service-postgres-db:
+    image: postgres:14
+    container_name: auth-service-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - ./.env
+    volumes:
+      - auth-service-postgres-db-data:/var/lib/postgresql/data
+    networks:
+      - auth-service-postgres-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      
+  auth-service-redis-db:
+    image: redis:alpine
+    container_name: auth-service-redis-db
+    restart: always
+    volumes:
+      - auth-service-redis-db-data:/data
+    networks:
+      - auth-service-redis-db-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      retries: 5
+      start_period: 5s
+    command: ["redis-server", "--appendonly", "yes"]
+
+
+networks:
+  auth-service-redis-db-network:
+    driver: bridge
+  auth-service-postgres-db-network:
+    driver: bridge
+    
+volumes:
+  auth-service-redis-db-data:
+  auth-service-postgres-db-data:

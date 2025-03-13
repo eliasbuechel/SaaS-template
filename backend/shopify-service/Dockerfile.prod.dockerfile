@@ -1,8 +1,10 @@
 FROM node:23.8.0-alpine
+
+RUN corepack enable && corepack prepare yarn@stable --activate
+
 WORKDIR /app
 
 COPY package.json yarn.lock .yarnrc.yml ./
-RUN corepack enable && corepack prepare yarn@stable --activate
 
 ENV NODE_ENV=production
 RUN yarn install --immutable && \

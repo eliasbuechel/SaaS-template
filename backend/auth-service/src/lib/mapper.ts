@@ -1,5 +1,5 @@
 import { ITenant } from "../interfaces/ITenant";
-import Tenant from "../types/Tenant"
+import Tenant from "../types/Tenant";
 import User from "../types/User";
 import {IUser} from "../interfaces/IUser";
 

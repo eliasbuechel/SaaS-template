@@ -2,9 +2,6 @@ FROM node:23.8.0-alpine
 
 WORKDIR /app
 
-RUN pwd
-RUN ls -a
-
 COPY package.json yarn.lock .yarnrc.yml ./
 RUN corepack enable && corepack prepare yarn@stable --activate
 

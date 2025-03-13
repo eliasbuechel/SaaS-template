@@ -1,8 +1,9 @@
 import {Response} from 'express';
 import jwt, {JwtPayload} from "jsonwebtoken";
-import {JWT_SECRET, JWT_REFRESH_SECRET, dev} from "../lib/config";
 import {IUser} from "../interfaces/IUser";
 import logger from "../utils/logger";
+import {DEV} from "./config/baseEnv";
+import ENV from "./config/env";
 
 export interface AccessTokenPayload {
     userId: string;
@@ -24,38 +25,38 @@ export const generateAccessToken = (user: IUser, tenantId?: string): string => {
         email: user.email
     };
 
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+    return jwt.sign(payload, ENV.JWT_ACCESS_SECRET, { expiresIn: "15m" });
 };
 
 export const generateRefreshToken = (userId: string): string => {
     const payload = { id: userId };
-    return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: "7d" });
+    return jwt.sign(payload, ENV.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 };
 
 export const extractAccessTokenData = (accessToken: string): AccessTokenPayload | null => {
     try {
-        return jwt.verify(accessToken, JWT_SECRET) as JwtPayload & AccessTokenPayload;
+        return jwt.verify(accessToken, ENV.JWT_ACCESS_SECRET) as JwtPayload & AccessTokenPayload;
     } catch (error) {
         logger.error("Error extracting and verifying access token:", error.message);
         return null;
     }
-}
+};
 
 export const extractRefreshTokenData = (refreshToken: string): RefreshTokenPayload | null => {
     try {
-        return jwt.verify(refreshToken, JWT_REFRESH_SECRET) as JwtPayload & RefreshTokenPayload;
+        return jwt.verify(refreshToken, ENV.JWT_REFRESH_SECRET) as JwtPayload & RefreshTokenPayload;
     } catch (error) {
         logger.error("Error extracting and verifying refresh token:", error);
         return null;
     }
-}
+};
 
 export const setTokenOnResponse = (res: Response, tokenName: string, token: string) => {
-    res.cookie(tokenName, token, { httpOnly: true, secure: !dev, sameSite: "lax" });
+    res.cookie(tokenName, token, { httpOnly: true, secure: !DEV, sameSite: "lax" });
     logger.info(`Adding or updating ${tokenName}`);
-}
+};
 
 export const setExpiredTokenOnResponse = (res: Response, tokenName: string) => {
-    res.cookie(tokenName, "", { httpOnly: true, secure: !dev, sameSite: "lax", expires: new Date(0), path: "/" });
+    res.cookie(tokenName, "", { httpOnly: true, secure: !DEV, sameSite: "lax", expires: new Date(0), path: "/" });
     logger.info(`Token ${tokenName} has been expired and removed.`);
-}
+};

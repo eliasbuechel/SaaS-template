@@ -1,11 +1,11 @@
 import crypto from "crypto";
-import {ENCRYPTION_KEY} from "./config";
 import logger from "../utils/logger";
+import ENV from "./config/env";
 
 const ALGORITHM = "aes-256-ctr";
 const IV_LENGTH = 16;
 
-const getKey = () => Buffer.from(ENCRYPTION_KEY, "utf-8").subarray(0, 32);
+const getKey = () => Buffer.from(ENV.ENCRYPTION_KEY, "utf-8").subarray(0, 32);
 
 export function encryptToken(token: string): string {
     const iv = crypto.randomBytes(IV_LENGTH);

@@ -1,5 +1,4 @@
 import {Router, Request, Response} from "express";
-import {SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, SHOPIFY_REDIRECT_URI} from "../../lib/config";
 import {verifyUser} from "../../middleware/verifyUser";
 import logger from "../../utils/logger";
 import {ITenant} from "../../interfaces/ITenant";
@@ -11,6 +10,7 @@ import {decryptSessionData, encryptSessionData, encryptToken, generateRandomStri
 import {existsTenantByTenantId, createOrUpdateTenant} from "../../lib/database/tenantRepo";
 import {getUser} from "../../lib/database/userRepo";
 import {generateAccessToken, setTokenOnResponse} from "../../lib/generateToken";
+import ENV from "../../lib/config/env";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -65,9 +65,9 @@ shopifyAuthRouter.get("/", verifyUser, logRequests, (req: Request, res: Response
 
     const scopes = 'write_products';
     const authUrl = `https://${shop}.myshopify.com/admin/oauth/authorize` +
-        `?client_id=${SHOPIFY_CLIENT_ID}` +
+        `?client_id=${ENV.SHOPIFY_CLIENT_ID}` +
         `&scope=${encodeURIComponent(scopes)}` +
-        `&redirect_uri=${encodeURIComponent(SHOPIFY_REDIRECT_URI)}` +
+        `&redirect_uri=${encodeURIComponent(ENV.SHOPIFY_REDIRECT_URI)}` +
         `&state=${encodeURIComponent(encryptedState)}`;
 
     logger.info(`Generated Shopify auth URL for shop: ${shop}`);
@@ -78,18 +78,18 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
     const { shop, code, state } = req.query as { shop?: string; code?: string; state?: string };
 
     if (!state || !req.session.shopifyOAuthState) {
-        setResponseWithErrorLog(res, 403, "Invalid state parameter", "Missing state parameter in OAuth callback")
+        setResponseWithErrorLog(res, 403, "Invalid state parameter", "Missing state parameter in OAuth callback");
         return;
     }
 
     try {
         const encryptedState = decodeURIComponent(state);
         if (encryptedState !== req.session.shopifyOAuthState) {
-            setResponseWithWarnLog(res, 403, "Invalid state parameter", "State mismatch in OAuth callback")
+            setResponseWithWarnLog(res, 403, "Invalid state parameter", "State mismatch in OAuth callback");
             return;
         }
     } catch (error) {
-        setResponseWithErrorLog(res, 400, "Invalid state parameter", "Failed to decode state parameter", error)
+        setResponseWithErrorLog(res, 400, "Invalid state parameter", "Failed to decode state parameter", error);
         return;
     }
 
@@ -98,14 +98,14 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
         stateData = decryptSessionData(req.session.shopifyOAuthState) as State;
         logger.info(`Successfully decrypted OAuth state for user: ${stateData.userId}`);
     } catch (error) {
-        setResponseWithErrorLog(res, 400, "Invalid state parameter", "Error decrypting OAuth state", error)
+        setResponseWithErrorLog(res, 400, "Invalid state parameter", "Error decrypting OAuth state", error);
         return;
     } finally {
         delete req.session.shopifyOAuthState;
     }
 
     if (!shop || !code) {
-        setResponseWithErrorLog(res, 400, "Missing required parameters", "Missing required parameters in OAuth callback")
+        setResponseWithErrorLog(res, 400, "Missing required parameters", "Missing required parameters in OAuth callback");
         return;
     }
     
@@ -115,8 +115,8 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                client_id: SHOPIFY_CLIENT_ID,
-                client_secret: SHOPIFY_CLIENT_SECRET,
+                client_id: ENV.SHOPIFY_CLIENT_ID,
+                client_secret: ENV.SHOPIFY_CLIENT_SECRET,
                 code: code,
             }),
         });
@@ -136,12 +136,12 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
         const tenant: ITenant = await createOrUpdateTenant(stateData.userId, shop, encryptedShopifyAccessToken);
 
         if (!tenant) {
-            throw new Error("Not able to retrieve tenant for the shop " + shop)
+            throw new Error("Not able to retrieve tenant for the shop " + shop);
         }
 
         const user = await getUser(stateData.userId);
         if (!user) {
-            throw new Error("Not able to retrieve User " + stateData.userId)
+            throw new Error("Not able to retrieve User " + stateData.userId);
         }
         
         updateAccessTokenForTenant(res, user, tenant);
@@ -171,11 +171,11 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
     }
     
     const accessToken = generateAccessToken(req.user, tenantId);
-    setTokenOnResponse(res, "access_token", accessToken)
+    setTokenOnResponse(res, "access_token", accessToken);
 
     logger.debug("Access token generated and set");
 
     res.status(200).json({ success: true, tenantId: tenantId });
-})
+});
 
 export default shopifyAuthRouter;

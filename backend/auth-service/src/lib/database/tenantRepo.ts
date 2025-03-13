@@ -3,7 +3,16 @@ import {ITenant} from "../../interfaces/ITenant";
 import {queryLogger} from "./query";
 import logger from "../../utils/logger";
 
-const mapTenant = (tenant: Record<string, any>): ITenant => ({
+interface IDbTenant {
+    id: string,
+    shopify_store_domain: string,
+    shopify_access_token: string,
+    user_id: string,
+    created_at: Date,
+    updated_at: Date,
+}
+
+const mapTenant = (tenant: IDbTenant): ITenant => ({
     id: tenant.id,
     shopifyStoreDomain: tenant.shopify_store_domain,
     shopifyAccessToken: tenant.shopify_access_token,
@@ -13,10 +22,10 @@ const mapTenant = (tenant: Record<string, any>): ITenant => ({
 });
 
 export const getTenant = async (userId: string, tenantId: string): Promise<ITenant> => {
-    const query: string = "SELECT * FROM tenants WHERE user_id = $1 AND id = $2"
+    const query: string = "SELECT * FROM tenants WHERE user_id = $1 AND id = $2";
 
     try {
-        const result: QueryResult<ITenant> = await queryLogger(query, [userId, tenantId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [userId, tenantId]);
         return mapTenant(result.rows[0]);
     } catch (error) {
         console.error(`Error getting tenant for Tenant: ${tenantId}, User: ${userId}`, error);
@@ -28,21 +37,21 @@ export const getOnlyTenant = async (userId: string): Promise<ITenant> => {
     const query: string = "SELECT * FROM tenants WHERE user_id = $1";
 
     try {
-        const result: QueryResult<ITenant> = await queryLogger(query, [userId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [userId]);
         if (result.rows.length === 0) throw new Error("No tenant found");
-        if (result.rows.length > 1) logger.warn("More than one tenant found")
+        if (result.rows.length > 1) logger.warn("More than one tenant found");
         return mapTenant(result.rows[0]);
     } catch (error) {
         console.error(`Error getting only tenant for User: ${userId}`, error);
         throw new Error("Database error while getting only tenant");
     }
-}
+};
 
 export const getLastUpdatedTenant = async (userId: string): Promise<ITenant | null> => {
     const query: string = "SELECT * FROM tenants WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1";
 
     try {
-        const result: QueryResult<ITenant> = await queryLogger(query, [userId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [userId]);
         return result.rows.length > 0 ? mapTenant(result.rows[0]) : null;
     } catch (error) {
         console.error(`Error getting last updated tenant for User: ${userId}`, error);
@@ -54,7 +63,7 @@ export const getAllTenants = async (userId: string): Promise<Array<ITenant>> => 
     const query: string = "SELECT * FROM tenants WHERE user_id = $1";
 
     try {
-        const result: QueryResult<ITenant> = await queryLogger(query, [userId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [userId]);
         return result.rows.map(mapTenant);
     } catch (error) {
         logger.error(`Error getting all tenants for User: ${userId}`, error);
@@ -68,10 +77,10 @@ export const createOrUpdateTenant = async (userId: string, shopifyStoreName: str
          VALUES ($1, $2, $3)
          ON CONFLICT (shopify_store_domain)
          DO UPDATE SET shopify_access_token = EXCLUDED.shopify_access_token, updated_at = NOW()
-         RETURNING *`
+         RETURNING *`;
 
     try {
-        const result: QueryResult<ITenant> = await queryLogger(query, [shopifyStoreName, shopifyAccessTokenEncrypted, userId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [shopifyStoreName, shopifyAccessTokenEncrypted, userId]);
         if (result.rows.length === 0) throw new Error("No tenant returned");
         logger.info(`Tenant created/updated for Shopify store: ${shopifyStoreName}, User: ${userId}`);
         return mapTenant(result.rows[0]);
@@ -82,7 +91,7 @@ export const createOrUpdateTenant = async (userId: string, shopifyStoreName: str
 };
 
 export const existsTenantByTenantId = async (userId: string, tenantId: string): Promise<boolean> => {
-    const query: string = "SELECT COUNT(*)::int AS count FROM tenants WHERE user_id = $1 AND id = $2"
+    const query: string = "SELECT COUNT(*)::int AS count FROM tenants WHERE user_id = $1 AND id = $2";
     
     try {
         const result = await queryLogger(query, [userId, tenantId]);
