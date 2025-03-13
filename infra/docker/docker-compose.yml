@@ -38,16 +38,16 @@ services:
     container_name: auth-service-db-redis
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - auth-service-network
-        
-        
+
   customer-dashboard:
     image: customer-dashboard
     container_name: customer-dashboard
     build:
       context: ../../frontend/customer-dashboard
+      dockerfile: ../../frontend/customer-dashboard/Dockerfile.dev.dockerfile
       args:
         NODE_ENV: development
     env_file:
@@ -59,12 +59,44 @@ services:
     networks:
       - customer-dashboard-network
     command: [ "yarn", "dev" ]
-      
+
+  shopify-service:
+    image: shopify-service
+    container_name: shopify-service
+    build:
+      context: ../../backend/shopify-service
+      dockerfile: ../../backend/shopify-service/Dockerfile.dev.dockerfile
+      args:
+        NODE_ENV: development
+    env_file:
+      - ../../backend/shopify-service/.env
+    ports:
+      - "4001:4001"
+    networks:
+      - shopify-service_redis-network
+    depends_on:
+      - shopify-service-db-redis
+
+  shopify-service-db-redis:
+    image: redis:alpine
+    container_name: shopify-service-db-redis
+    restart: always
+    ports:
+      - "6381:6379"
+    volumes:
+      - shopify-service_redis-data:/data
+    networks:
+      - shopify-service_redis-network
+    command: [ "redis-server", "--appendonly", "yes" ]
+  
 volumes:
   auth-service-db-postgres-data:
+  shopify-service_redis-data:
     
 networks:
   auth-service-network:
     driver: bridge
   customer-dashboard-network:
+    driver: bridge
+  shopify-service_redis-network:
     driver: bridge

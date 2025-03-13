@@ -13,7 +13,7 @@ const levelColors: Record<string, string> = {
 const originalFactory = log.methodFactory;
 log.methodFactory = function (methodName, logLevel, loggerName) {
     const rawMethod = originalFactory(methodName, logLevel, loggerName);
-    return function (...messages: any[]) {
+    return function (...messages) {
         const color = levelColors[methodName] || "color: black";
         rawMethod(`%c${methodName}: `, color, ...messages);
     };

@@ -15,10 +15,10 @@ redisClient.on("error", (err: any) => {
 });
 
 export const connectToRedis = () => {
-    logger.info(`Connecting to redis at ${ENV.REDIS_URL}...`)
+    logger.info(`Connecting to redis at ${ENV.REDIS_URL}...`);
     redisClient
         .connect()
         .catch((error) => logger.error("Not able to connect to redis", error));
-}
+};
 
 export default redisClient;

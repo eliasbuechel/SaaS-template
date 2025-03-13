@@ -1,0 +1,38 @@
+services:
+  shopify-service:
+    image: shopify-service
+    container_name: shopify-service
+    build:
+      context: .
+      dockerfile: Dockerfile.prod.dockerfile
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./.env
+    ports:
+      - "4001:4001"
+    networks:
+      - shopify-service_redis-network
+    depends_on:
+      - redis
+    command: ["yarn", "dev"]
+      
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - shopify-service_redis-data:/data
+    networks:
+      - shopify-service_redis-network
+    command: ["redis-server", "--appendonly", "yes"]
+
+
+networks:
+  shopify-service_redis-network:
+    driver: bridge
+    
+volumes:
+  shopify-service_redis-data:
