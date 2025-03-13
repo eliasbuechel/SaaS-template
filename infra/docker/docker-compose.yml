@@ -9,36 +9,45 @@ services:
       - ../../backend/auth-service/.env
     ports:
       - "4000:4000"
+    networks:
+      - auth-service-redis-db-network
+      - auth-service-postgres-db-network
     depends_on:
-      - auth-service-db-postgres
-      - auth-service-db-redis
-    networks:
-      - auth-service-network
-      - customer-dashboard-network
+      auth-service-postgres-db:
+        condition: service_healthy
+      auth-service-redis-db:
+        condition: service_healthy
         
-  auth-service-db-postgres:
+  auth-service-postgres-db:
     image: postgres:14
-    container_name: auth-service-db-postgres
+    container_name: auth-service-postgres-db
     restart: always
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: auth_db
-    ports:
-      - "5432:5432"
+    env_file:
+      - ../../backend/auth-service/.env.auth-service-postgres-db
     volumes:
-      - auth-service-db-postgres-data:/var/lib/postgresql/data
+      - auth-service-postgres-db-data:/var/lib/postgresql/data
     networks:
-      - auth-service-network
-
-  auth-service-db-redis:
-    image: redis:latest
-    container_name: auth-service-db-redis
+      - auth-service-postgres-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"'"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+  
+  auth-service-redis-db:
+    image: redis:alpine
+    container_name: auth-service-redis-db
     restart: always
-    ports:
-      - "6380:6379"
+    volumes:
+      - auth-service-redis-db-data:/data
     networks:
-      - auth-service-network
+      - auth-service-redis-db-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      retries: 5
+      start_period: 5s
+    command: ["redis-server", "--appendonly", "yes"]
 
   customer-dashboard:
     image: customer-dashboard
@@ -71,30 +80,39 @@ services:
     ports:
       - "4001:4001"
     networks:
-      - shopify-service_redis-network
+      - shopify-service-redis-db-network
     depends_on:
-      - shopify-service-db-redis
+      shopify-service-redis-db:
+        condition: service_healthy
 
-  shopify-service-db-redis:
+  shopify-service-redis-db:
     image: redis:alpine
     container_name: shopify-service-db-redis
     restart: always
     ports:
       - "6381:6379"
     volumes:
-      - shopify-service_redis-data:/data
+      - shopify-service-redis-db-data:/data
     networks:
-      - shopify-service_redis-network
+      - shopify-service-redis-db-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      retries: 5
+      start_period: 5s
     command: [ "redis-server", "--appendonly", "yes" ]
   
 volumes:
-  auth-service-db-postgres-data:
-  shopify-service_redis-data:
+  auth-service-redis-db-data:
+  auth-service-postgres-db-data:
+  shopify-service-redis-db-data:
     
 networks:
-  auth-service-network:
+  auth-service-redis-db-network:
+    driver: bridge
+  auth-service-postgres-db-network:
     driver: bridge
   customer-dashboard-network:
     driver: bridge
-  shopify-service_redis-network:
+  shopify-service-redis-db-network:
     driver: bridge
