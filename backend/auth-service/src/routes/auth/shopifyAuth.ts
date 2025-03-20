@@ -1,24 +1,21 @@
-import {Router, Request, Response} from "express";
-import {verifyUser} from "../../middleware/verifyUser";
-import logger from "../../utils/logger";
-import {ITenant} from "../../interfaces/ITenant";
-import {logRequests} from "../../middleware/logRequests";
-import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
-import {updateAccessTokenForTenant} from "./auth";
-import {verifyTenant} from "../../middleware/verifyTenant";
-import {
-    decryptSessionData,
-    decryptToken,
-    encryptSessionData,
-    encryptToken,
-    generateRandomString
-} from "../../lib/encryption";
-import {existsTenantByTenantId, createOrUpdateTenant} from "../../lib/database/tenantRepo";
-import {getUser} from "../../lib/database/userRepo";
-import {generateAccessToken, setTokenOnResponse} from "../../lib/generateToken";
-import ENV from "../../lib/config/env";
-import Shopify from "shopify-api-node";
-import {verifyInternal} from "../../middleware/verifyInternal";
+import '@shopify/shopify-api/adapters/node';
+import {Request, Response, Router} from "express";
+import {verifyUser} from "@/middleware/verifyUser.js";
+import {decryptSessionData, encryptSessionData, generateRandomString} from "@/lib/encryption.js";
+import {logRequests} from "@/middleware/logRequests.js";
+import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "@/utils/messageHandling.js";
+import logger from "@/utils/logger.js";
+import {createOrUpdateTenant, existsTenantByTenantId} from "@/lib/database/tenantRepo.js";
+import {verifyTenant} from "@/middleware/verifyTenant.js";
+import {generateAccessToken, setTokenOnResponse} from "@/lib/generateToken.js";
+import {verifyInternal} from "@/middleware/verifyInternal.js";
+import {IUser} from "@/interfaces/IUser.js";
+import {getUser} from "@/lib/database/userRepo.js";
+import {ITenant} from "@/interfaces/ITenant.js";
+import {updateAccessTokenForTenant} from "@/routes/auth/auth.js";
+import {shopify} from "@/lib/shopify.js";
+import {Session} from "@shopify/shopify-api";
+import {redisShopifySessionStorage} from "@/lib/database/redisShopifySessionStorage.js";
 
 const shopifyAuthRouter: Router = Router();
 
@@ -45,8 +42,9 @@ const createEncryptedState = (userId: string, redirectUrlAfterAuth: string, redi
     return encryptSessionData(state);
 };
 
-shopifyAuthRouter.get("/", verifyUser, logRequests, (req: Request, res: Response): Promise<void> => {
-    const { shop, redirectUrlAfterAuth, redirectUrlAfterError } = req.query as {shop?: string, redirectUrlAfterAuth?: string, redirectUrlAfterError?: string };
+shopifyAuthRouter.get("/", logRequests, verifyUser, logRequests, async (req: Request, res: Response): Promise<void> => {
+    let shop: string | undefined = req.query.shop as string;
+    const { redirectUrlAfterAuth, redirectUrlAfterError } = req.query as { redirectUrlAfterAuth?: string, redirectUrlAfterError?: string };
 
     if (!shop) {
         setResponseWithWarnLog(res, 400, "No shop provided", "Missing shop parameter in request");
@@ -67,43 +65,48 @@ shopifyAuthRouter.get("/", verifyUser, logRequests, (req: Request, res: Response
         setResponseWithWarnLog(res, 400, "Unauthorized request", "No user attached to session");
         return;
     }
+
+    const SHOP_ENDING: string = ".myshopify.com"
+    if (!shop.endsWith(SHOP_ENDING)) {
+        logger.warn(`Adding ending of ${SHOP_ENDING} to the shop ${shop} resulting in ${shop + SHOP_ENDING}`);
+        shop = shop + SHOP_ENDING;
+    }
     
-    const encryptedState: string = createEncryptedState(req.user.id, redirectUrlAfterAuth, redirectUrlAfterError);
-    req.session.shopifyOAuthState = encryptedState;
-
-    const scopes = 'write_products';
-    const authUrl = `https://${shop}.myshopify.com/admin/oauth/authorize` +
-        `?client_id=${ENV.SHOPIFY_CLIENT_ID}` +
-        `&scope=${encodeURIComponent(scopes)}` +
-        `&redirect_uri=${encodeURIComponent(ENV.SHOPIFY_REDIRECT_URI)}` +
-        `&state=${encodeURIComponent(encryptedState)}`;
-
-    logger.info(`Generated Shopify auth URL for shop: ${shop}`);
-    res.json({ redirectUrl: authUrl });
+    try {
+        req.session.shopifyOAuthState = createEncryptedState(req.user.id, redirectUrlAfterAuth, redirectUrlAfterError);;
+        
+        return shopify.auth.begin({
+            shop: shop,
+            callbackPath: "/api/auth/shopify/oauth2callback",
+            isOnline: false,
+            rawRequest: req,
+            rawResponse: res
+        });
+    } catch (error: any) {
+        redirectToErrorPage(req, res, redirectUrlAfterError, 500, "Shopify OAuth start error", error);
+    }
 });
 
 shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: Response): Promise<void> => {
-    const { shop, code, state } = req.query as { shop?: string; code?: string; state?: string };
-
-    if (!state || !req.session.shopifyOAuthState) {
-        setResponseWithErrorLog(res, 403, "Invalid state parameter", "Missing state parameter in OAuth callback");
+    const callbackResponse = await shopify.auth.callback({
+        rawRequest: req,
+        rawResponse: res,
+    });
+    const session = callbackResponse.session;
+    
+    if (!session) {
+        setResponseWithErrorLog(res, 400, "Invalid shopify oauth2callback response", "response does not contain a shopify session");
         return;
     }
-
-    try {
-        const encryptedState = decodeURIComponent(state);
-        if (encryptedState !== req.session.shopifyOAuthState) {
-            setResponseWithWarnLog(res, 403, "Invalid state parameter", "State mismatch in OAuth callback");
-            return;
-        }
-    } catch (error) {
-        setResponseWithErrorLog(res, 400, "Invalid state parameter", "Failed to decode state parameter", error);
+    
+    if (!await redisShopifySessionStorage.storeSession(session)) {
+        setResponseWithErrorLog(res, 500, "Internal server error", "Not able to store shopify session");
         return;
     }
 
     let stateData: State;
     try {
-        stateData = decryptSessionData(req.session.shopifyOAuthState) as State;
+        stateData = decryptSessionData(req.session.shopifyOAuthState!) as State;
         logger.info(`Successfully decrypted OAuth state for user: ${stateData.userId}`);
     } catch (error) {
         setResponseWithErrorLog(res, 400, "Invalid state parameter", "Error decrypting OAuth state", error);
@@ -112,52 +115,23 @@ shopifyAuthRouter.get('/oauth2callback', logRequests, async (req: Request, res: 
         delete req.session.shopifyOAuthState;
     }
 
-    if (!shop || !code) {
-        setResponseWithErrorLog(res, 400, "Missing required parameters", "Missing required parameters in OAuth callback");
-        return;
-    }
-    
     try {
-        const tokenUrl = `https://${shop}/admin/oauth/access_token`;
-        const response = await fetch(tokenUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: ENV.SHOPIFY_CLIENT_ID,
-                client_secret: ENV.SHOPIFY_CLIENT_SECRET,
-                code: code,
-            }),
-        });
-
-        if (!response.ok) {
-            setResponseWithErrorLog(res, 400, "Failed to get access token from Shopify", `Shopify API responded with status ${response.status}`);
-            return;
-        }
-        
-        const data = await response.json();
-        if (!data.access_token) {
-            setResponseWithWarnLog(res, 400, "Failed to get access token from Shopify", "Shopify response did not contain an access token");
-            return;
-        }
-
-        const encryptedShopifyAccessToken = encryptToken(data.access_token);
-        const tenant: ITenant = await createOrUpdateTenant(stateData.userId, shop, encryptedShopifyAccessToken);
-
-        if (!tenant) {
-            throw new Error("Not able to retrieve tenant for the shop " + shop);
-        }
-
-        const user = await getUser(stateData.userId);
+        const user: IUser | null = await getUser(stateData.userId);
         if (!user) {
             throw new Error("Not able to retrieve User " + stateData.userId);
         }
-        
+
+        const tenant: ITenant | null = await createOrUpdateTenant(stateData.userId, session.shop, session.id);
+        if (!tenant) {
+            throw new Error("Not able to retrieve tenant for the shop " + session.shop);
+        }
+
         updateAccessTokenForTenant(res, user, tenant);
-        
+
         logger.info(`Shopify store ${tenant.shopifyStoreDomain} connected for user ${user.email}`);
         res.redirect(stateData.redirectUrlAfterAuth);
-    } catch (error) {
-        redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
+    } catch (error: any) {
+        redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Shopify OAuth callback error", error);
     }
 });
 
@@ -170,7 +144,7 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
     }
 
     logger.debug("Valid tenant id to switch", tenantId);
-    const tenantExists = await existsTenantByTenantId(req.user.id, tenantId);
+    const tenantExists = await existsTenantByTenantId(req.user!.id, tenantId);
 
     logger.debug("Tenant exists", tenantExists);
     if (!tenantExists) {
@@ -178,7 +152,7 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
         return;
     }
     
-    const accessToken = generateAccessToken(req.user, tenantId);
+    const accessToken = generateAccessToken(req.user!, tenantId);
     setTokenOnResponse(res, "access_token", accessToken);
 
     logger.debug("Access token generated and set");
@@ -186,10 +160,18 @@ shopifyAuthRouter.post("/switch",logRequests, verifyUser, verifyTenant, async (r
     res.status(200).json({ success: true, tenantId: tenantId });
 });
 
-shopifyAuthRouter.get('/credentials', logRequests, verifyInternal, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
-    const shopifyStoreDomain: string = req.tenant.shopifyStoreDomain;
-    const shopifyAccessToken: string = decryptToken(req.tenant.shopifyAccessToken);
-    res.json({storeDomain: shopifyStoreDomain, accessToken: shopifyAccessToken});
+shopifyAuthRouter.get('/session', logRequests, verifyInternal, verifyUser, verifyTenant, async (req: Request, res: Response): Promise<void> => {
+    const session: Session | undefined = await redisShopifySessionStorage.loadSession(req.tenant?.shopifySessionId!);
+    
+    if (!session) {
+        setResponseWithErrorLog(res, 400, `Not able to load shopify session ${req.tenant?.shopifySessionId!}`);
+        return;
+    }
+
+    logger.debug(`Sending following session: ${session}`);
+    logger.debug(`session data access token: ${session.accessToken}`);
+
+    res.json(session.toObject());
 });
 
 export default shopifyAuthRouter;

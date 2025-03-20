@@ -1,6 +1,7 @@
-import BASE_ENV from "./baseEnv";
-import TRANSFORMERS from "./transformers";
-import {getRequiredEnv} from "./envUtils";
+import BASE_ENV from "@/lib/config/baseEnv.js";
+import TRANSFORMERS from "@/lib/config/transformers.js";
+import {getRequiredEnv} from "@/lib/config/envUtils.js";
+
 
 interface CustomEnv {
     INTERNAL_PORT: number;
@@ -11,7 +12,8 @@ interface CustomEnv {
     SHOPIFY_CLIENT_ID: string,
     SHOPIFY_REDIRECT_URI: string,
     SHOPIFY_CLIENT_SECRET: string,
-    INTERNAL_AUTH_COMMUNICATION_SECRET: string
+    INTERNAL_AUTH_COMMUNICATION_SECRET: string,
+    
 }
 
 const CUSTOM_ENV: CustomEnv = {

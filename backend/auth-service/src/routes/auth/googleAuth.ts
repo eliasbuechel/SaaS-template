@@ -1,16 +1,12 @@
 import { Router, Request, Response } from "express";
-import logger from "../../utils/logger";
-import {IUser} from "../../interfaces/IUser";
-import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "../../utils/messageHandling";
-import {logRequests} from "../../middleware/logRequests";
-import {decryptSessionData, encryptSessionData, generateRandomString} from "../../lib/encryption";
-import {createUser, getUserByGoogleId} from "../../lib/database/userRepo";
-import {
-    generateAccessToken,
-    generateRefreshToken,
-    setTokenOnResponse
-} from "../../lib/generateToken";
-import ENV from "../../lib/config/env";
+import {decryptSessionData, encryptSessionData, generateRandomString} from "@/lib/encryption.js";
+import {logRequests} from "@/middleware/logRequests.js";
+import {redirectToErrorPage, setResponseWithErrorLog, setResponseWithWarnLog} from "@/utils/messageHandling.js";
+import ENV from "@/lib/config/env.js";
+import logger from "@/utils/logger.js";
+import {IUser} from "@/interfaces/IUser.js";
+import {createUser, getUserByGoogleId} from "@/lib/database/userRepo.js";
+import {generateAccessToken, generateRefreshToken, setTokenOnResponse} from "@/lib/generateToken.js";
 
 declare module 'express-session' {
     interface SessionData {
@@ -85,7 +81,7 @@ const getGoogleOAuth2AccessToken = async (code: string): Promise<string | null> 
         })
     });
 
-    const responseData = await response.json();
+    const responseData = await response.json() as { access_token: string | null};
     return responseData.access_token;
 };
 
@@ -101,6 +97,8 @@ googleAuthRouter.get("/oauth2callback", logRequests, async (req: Request, res: R
     const { code, state } = req.query as { code?: string; state?: string };
 
     try {
+        if (!state) throw Error("State is undefined");
+        
         const encryptedState = decodeURIComponent(state);
         if (encryptedState !== req.session.googleOAuthState) {
             setResponseWithWarnLog(res, 403, "Invalid state parameter", "State mismatch in OAuth callback");
@@ -145,7 +143,7 @@ googleAuthRouter.get("/oauth2callback", logRequests, async (req: Request, res: R
 
         logger.info(`User ${user.email} authenticated. Redirecting to ${stateData.redirectUrlAfterAuth}`);
         res.redirect(stateData.redirectUrlAfterAuth);
-    } catch (error) {
+    } catch (error: any) {
         redirectToErrorPage(req, res, stateData.redirectUrlAfterError, 500, "Internal server error", error);
     }
 });

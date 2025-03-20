@@ -1,32 +1,65 @@
-import {Router, Request, Response} from "express";
-import logger from "../utils/logger.js";
-import ENV from "../lib/config/env.js";
+import {Request, Response, Router} from "express";
+import {logRequests} from "../middleware/logRequests.js";
+import {verifyShopifySession} from "@/middleware/verifyShopifySession.js";
+import logger from "@/utils/logger.js";
+import axios, {AxiosResponse, HttpStatusCode} from "axios";
+import ENV from "@/lib/config/env.js";
+import {setResponseWithErrorLog} from "@/utils/messageHandling.js";
+import '@shopify/shopify-api/adapters/node';
+import Shopify, {Session} from "@shopify/shopify-api";
+import {shopify} from "@/lib/shopify.js";
+import {Product} from "@/types/shopify/Product.js";
 
 const shopifyRouter: Router = Router();
 
-shopifyRouter.get('/orders', async (req: Request, res: Response) => {
+const getShopifySession = async (req: Request): Promise<Session | undefined> => {
     try {
-        const cookies = req.headers.cookie;
-
-        const response = await fetch("https://auth-service/api/auth/validate", {
-            method: "POST",
-            credentials: "include",
+        const response: AxiosResponse = await axios.get(`${ENV.INTERNAL_AUTH_SERVICE_URL}/api/auth/shopify/session`, {
             headers: {
-                "Content-Type": "application/json",
-                "Cookie": cookies || "",
-                "Authorization": `Bearer ${ENV.INTERNAL_AUTH_COMMUNICATION_SECRET}`
-            }
+                Authorization: `Bearer ${ENV.INTERNAL_AUTH_COMMUNICATION_SECRET}`,
+                Cookie: req.headers.cookie || "",
+            },
         });
         
-        if (!response.ok) {
-            logger.error("Invalid credentials to request data from shopify");
-            res.status(401).send("Not authorized");
-            return;
+        if (response.status !== HttpStatusCode.Ok) {
+            logger.error(`Error while retrieving shopify session. Received response status ${response.status}`);
+            return undefined;
         }
+        
+        const sessionData = response.data;
+        logger.debug(`Received session data: ${sessionData}`);
+        const session = new Session(sessionData.id);
+        Object.assign(session, sessionData);
+        
+        return session;
+    } catch (error) {
+        logger.error(`Error while retrieving shopify session.`, error);
+    }
+    
+    return undefined;
+}
 
-        const authData = await response.json();
-        console.log(authData);
-    } catch (error: any) {
-        logger.error("Error fetching products from Shopify:", error.message);
+shopifyRouter.get('/products', logRequests, verifyShopifySession, async (req: Request, res: Response): Promise<void> => {
+    const session: Session | undefined = await getShopifySession(req);
+    if (!session) {
+        setResponseWithErrorLog(res, 500, "Internal server error", "Not able to retrieve shopify session");
+        return;
+    }
+    
+    try {
+        const client = new shopify.clients.Rest({session});
+        const response: Shopify.RestRequestReturn  = await client.get({ path: "products" })
+        
+        const products: Product[] = response.body.products as Product[];
+        // logger.debug(`Shopify products: ${JSON.stringify(products)}`);
+        logger.debug(`Retrieved ${products?.length} products from shopify.`);
+        if (products?.length > 0) logger.debug(`First product: ${JSON.stringify(products[0])}`)
+        
+        res.json({ products });
+    } catch (error) {
+        logger.error("Not able to retrieve products form shopify store", error);
+        res.status(404).send("Not Found");
     }
 });
+
+export default shopifyRouter;

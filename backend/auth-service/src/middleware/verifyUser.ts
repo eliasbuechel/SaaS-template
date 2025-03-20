@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import logger from "../utils/logger";
-import {setResponseWithWarnLog} from "../utils/messageHandling";
+import {setResponseWithWarnLog} from "@/utils/messageHandling.js";
 import {
-    AccessTokenPayload,
-    extractAccessTokenData,
+    AccessTokenPayload, extractAccessTokenData,
     extractRefreshTokenData,
     generateAccessToken,
-    RefreshTokenPayload, setTokenOnResponse
-} from "../lib/generateToken";
-import {getUser} from "../lib/database/userRepo";
-import {getOnlyTenant, getTenant, getTenantCount} from "../lib/database/tenantRepo";
+    RefreshTokenPayload,
+    setTokenOnResponse
+} from "@/lib/generateToken.js";
+import {getUser} from "@/lib/database/userRepo.js";
+import {getOnlyTenant, getTenant, getTenantCount} from "@/lib/database/tenantRepo.js";
+import logger from "@/utils/logger.js";
 
 export const verifyUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     let accessToken: string = req.cookies["access_token"] as string;

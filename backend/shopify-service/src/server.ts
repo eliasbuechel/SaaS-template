@@ -1,3 +1,5 @@
+import {DEV} from "./lib/config/baseEnv.js";
+import ENV from "./lib/config/env.js";
 import cors from "cors";
 import http from "http";
 import helmet from "helmet";
@@ -5,10 +7,8 @@ import express, {Application} from "express";
 import session from "express-session";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import ENV from "./lib/config/env.js";
 import logger from "./utils/logger.js";
 import router from "./routes/router.js";
-import {DEV} from "./lib/config/baseEnv.js";
 import redisClient, {connectToRedis} from "./lib/redis.js";
 import {RedisStore} from "connect-redis";
 
@@ -17,7 +17,7 @@ const port = ENV.PORT;
 
 app.use(helmet());
 app.use(cors({
-    origin: ENV.ALLOWED_CORS_ORIGIN,
+    origin: ENV.ALLOWED_CORS_ORIGIN.split(","),
     credentials: true,
 }));
 

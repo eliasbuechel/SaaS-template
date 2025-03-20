@@ -1,12 +1,12 @@
 import {QueryResult} from "pg";
-import {ITenant} from "../../interfaces/ITenant";
-import {queryLogger} from "./query";
-import logger from "../../utils/logger";
+import {ITenant} from "@/interfaces/ITenant.js";
+import {queryLogger} from "@/lib/database/query.js";
+import logger from "@/utils/logger.js";
 
 interface IDbTenant {
     id: string,
     shopify_store_domain: string,
-    shopify_access_token: string,
+    shopify_session_id: string,
     user_id: string,
     created_at: Date,
     updated_at: Date,
@@ -15,7 +15,7 @@ interface IDbTenant {
 const mapTenant = (tenant: IDbTenant): ITenant => ({
     id: tenant.id,
     shopifyStoreDomain: tenant.shopify_store_domain,
-    shopifyAccessToken: tenant.shopify_access_token,
+    shopifySessionId: tenant.shopify_session_id,
     userId: tenant.user_id,
     createdAt: tenant.created_at,
     updatedAt: tenant.updated_at
@@ -71,16 +71,16 @@ export const getAllTenants = async (userId: string): Promise<Array<ITenant>> => 
     }
 };
 
-export const createOrUpdateTenant = async (userId: string, shopifyStoreName: string, shopifyAccessTokenEncrypted: string): Promise<ITenant | null> => {
+export const createOrUpdateTenant = async (userId: string, shopifyStoreName: string, shopifySessionId: string): Promise<ITenant | null> => {
     const query: string =
-        `INSERT INTO tenants (shopify_store_domain, shopify_access_token, user_id)
+        `INSERT INTO tenants (shopify_store_domain, shopify_session_id, user_id)
          VALUES ($1, $2, $3)
          ON CONFLICT (shopify_store_domain)
-         DO UPDATE SET shopify_access_token = EXCLUDED.shopify_access_token, updated_at = NOW()
+         DO UPDATE SET shopify_session_id = EXCLUDED.shopify_session_id, updated_at = NOW()
          RETURNING *`;
 
     try {
-        const result: QueryResult<IDbTenant> = await queryLogger(query, [shopifyStoreName, shopifyAccessTokenEncrypted, userId]);
+        const result: QueryResult<IDbTenant> = await queryLogger(query, [shopifyStoreName, shopifySessionId, userId]);
         if (result.rows.length === 0) throw new Error("No tenant returned");
         logger.info(`Tenant created/updated for Shopify store: ${shopifyStoreName}, User: ${userId}`);
         return mapTenant(result.rows[0]);

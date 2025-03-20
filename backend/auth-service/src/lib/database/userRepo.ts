@@ -1,7 +1,7 @@
-import {IUser} from "../../interfaces/IUser";
-import logger from "../../utils/logger";
-import {queryLogger} from "./query";
 import {QueryResult} from "pg";
+import {IUser} from "@/interfaces/IUser.js";
+import {queryLogger} from "@/lib/database/query.js";
+import logger from "@/utils/logger.js";
 
 interface IDbUser {
     id: string;

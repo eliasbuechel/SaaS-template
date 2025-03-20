@@ -15,6 +15,7 @@ export default function Navbar() {
             ) : (
                 <>
                     <Link href="/dashboard">Dashboard</Link>
+                    <Link href="/dashboard/shopify">Shopify</Link>
                     <button onClick={logout}>Logout</button>
                 </>
             )}

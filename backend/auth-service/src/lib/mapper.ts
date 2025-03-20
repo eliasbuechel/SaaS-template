@@ -1,7 +1,7 @@
-import { ITenant } from "../interfaces/ITenant";
-import Tenant from "../types/Tenant";
-import User from "../types/User";
-import {IUser} from "../interfaces/IUser";
+import {ITenant} from "@/interfaces/ITenant.js";
+import Tenant from "@/types/Tenant.js";
+import {IUser} from "@/interfaces/IUser.js";
+import User from "@/types/User.js";
 
 export const mapTenantToFrontend = (tenant: ITenant): Tenant => {
     return {

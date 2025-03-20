@@ -1,19 +1,15 @@
 import {Router, Request, Response} from "express";
-import {logRequests} from "../../middleware/logRequests";
-import {verifyUser} from "../../middleware/verifyUser";
-import {IUser} from "../../interfaces/IUser";
-import {ITenant} from "../../interfaces/ITenant";
-import User from "../../types/User";
-import Tenant from "../../types/Tenant";
-import logger from "../../utils/logger";
-import {setResponseWithWarnLog} from "../../utils/messageHandling";
-import {
-    generateAccessToken,
-    setExpiredTokenOnResponse,
-    setTokenOnResponse
-} from "../../lib/generateToken";
-import {getAllTenants} from "../../lib/database/tenantRepo";
-import {mapTenantToFrontend, mapUserToFrontend} from "../../lib/mapper";
+import {generateAccessToken, setExpiredTokenOnResponse, setTokenOnResponse} from "@/lib/generateToken.js";
+import {IUser} from "@/interfaces/IUser.js";
+import {ITenant} from "@/interfaces/ITenant.js";
+import {logRequests} from "@/middleware/logRequests.js";
+import {verifyUser} from "@/middleware/verifyUser.js";
+import {getAllTenants} from "@/lib/database/tenantRepo.js";
+import {setResponseWithWarnLog} from "@/utils/messageHandling.js";
+import User from "@/types/User.js";
+import {mapTenantToFrontend, mapUserToFrontend} from "@/lib/mapper.js";
+import Tenant from "@/types/Tenant.js";
+import logger from "@/utils/logger.js";
 
 const authRouter: Router = Router();
 
@@ -47,7 +43,7 @@ authRouter.get('/status', logRequests, verifyUser, async (req: Request, res: Res
     }
 });
 
-authRouter.delete('/logout', async (req: Request, res: Response): Promise<void> => {
+authRouter.delete('/logout', async (_req: Request, res: Response): Promise<void> => {
     setExpiredTokenOnResponse(res, "access_token");
     setExpiredTokenOnResponse(res, "refresh_token");
 

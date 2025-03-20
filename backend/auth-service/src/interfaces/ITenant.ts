@@ -1,7 +1,7 @@
 export interface ITenant {
     id: string;
     shopifyStoreDomain: string;
-    shopifyAccessToken: string;
+    shopifySessionId: string;
     userId: string;
     createdAt: Date;
     updatedAt?: Date;

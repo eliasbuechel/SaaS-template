@@ -1,12 +1,12 @@
 import express, {Request, Response, Router} from "express";
-import { verifyTenant } from "../middleware/verifyTenant";
-import {verifyUser} from "../middleware/verifyUser";
-import {logRequests} from "../middleware/logRequests";
-import Tenant from "../types/Tenant";
-import {setResponseWithErrorLog} from "../utils/messageHandling";
-import {ITenant} from "../interfaces/ITenant";
-import {mapTenantToFrontend} from "../lib/mapper";
-import {getAllTenants} from "../lib/database/tenantRepo";
+import {logRequests} from "@/middleware/logRequests.js";
+import {verifyUser} from "@/middleware/verifyUser.js";
+import {verifyTenant} from "@/middleware/verifyTenant.js";
+import Tenant from "@/types/Tenant.js";
+import {mapTenantToFrontend} from "@/lib/mapper.js";
+import {ITenant} from "@/interfaces/ITenant.js";
+import {getAllTenants} from "@/lib/database/tenantRepo.js";
+import {setResponseWithErrorLog} from "@/utils/messageHandling.js";
 
 const tenantRouter: Router = express.Router();
 

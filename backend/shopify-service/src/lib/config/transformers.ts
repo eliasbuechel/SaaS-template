@@ -1,4 +1,4 @@
-import {NodeEnv} from "./baseEnv.js";
+import {NodeEnv} from "@/lib/config/baseEnv.js";
 
 const TRANSFORMERS = {
     STRING: (value: string) => value,
