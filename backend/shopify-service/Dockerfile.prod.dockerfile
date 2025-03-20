@@ -4,10 +4,11 @@ RUN corepack enable && corepack prepare yarn@stable --activate
 
 WORKDIR /app
 
+ENV NODE_ENV=production
+
 COPY package.json yarn.lock .yarnrc.yml ./
 
-ENV NODE_ENV=production
-RUN yarn install --immutable && \
+RUN NODE_ENV=production yarn workspaces focus --all --production && \
     yarn cache clean
 
 COPY . .

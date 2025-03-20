@@ -1,6 +1,6 @@
 "use client";
 
-import ShopifyConnectForm from "@/components/ShopifyConnectForm";
+import ShopifyConnectForm from "@/components/auth/ShopifyConnectForm";
 
 export default function Dashboard() {
     return <>

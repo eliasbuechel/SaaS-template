@@ -1,7 +1,7 @@
 "use client";
 
-import SwitchTenant from "@/components/SwitchTenant";
-import ShopifyConnectForm from "@/components/ShopifyConnectForm";
+import SwitchTenant from "@/components/auth/SwitchTenant";
+import ShopifyConnectForm from "@/components/auth/ShopifyConnectForm";
 import React from "react";
 import Navbar from "@/components/Navbar";
 import {useAuth} from "@/context/AuthContext";

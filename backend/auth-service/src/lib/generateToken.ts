@@ -1,9 +1,9 @@
 import {Response} from 'express';
 import jwt, {JwtPayload} from "jsonwebtoken";
-import {IUser} from "../interfaces/IUser";
-import logger from "../utils/logger";
-import {DEV} from "./config/baseEnv";
-import ENV from "./config/env";
+import {IUser} from "@/interfaces/IUser.js";
+import ENV from "@/lib/config/env.js";
+import logger from "@/utils/logger.js";
+import {DEV} from "@/lib/config/baseEnv.js";
 
 export interface AccessTokenPayload {
     userId: string;

@@ -1,6 +1,6 @@
 import pg from 'pg';
-import logger from "../../utils/logger";
-import ENV from "../config/env";
+import logger from "@/utils/logger.js";
+import ENV from "@/lib/config/env.js";
 
 const { Pool, Client } = pg;
 const connectionString = ENV.POSTGRES_DATABASE_URL;
@@ -34,7 +34,7 @@ const initializeDatabase = async () => {
             CREATE TABLE IF NOT EXISTS tenants (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 shopify_store_domain TEXT UNIQUE NOT NULL,
-                shopify_access_token TEXT NOT NULL,
+                shopify_session_id TEXT NOT NULL,
                 user_id UUID REFERENCES users(id) ON DELETE CASCADE,
                 created_at TIMESTAMP DEFAULT now(),
                 updated_at TIMESTAMP DEFAULT now()

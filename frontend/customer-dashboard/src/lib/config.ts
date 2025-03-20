@@ -1,4 +1,4 @@
-import log from "../utils/logger"
+import log from "@/utils/logger"
 
 function envIsMissing(key: string): undefined {
     log.error(`Error: ${key} environment variable must be defined!`);

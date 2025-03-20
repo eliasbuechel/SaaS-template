@@ -1,28 +1,28 @@
+import {DEV} from "@/lib/config/baseEnv.js";
+import ENV from "@/lib/config/env.js";
+import logger from "@/utils/logger.js";
 import express, {Application, Request, Response} from 'express';
-import router from "./routes/router";
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import logger from "./utils/logger";
-import {connectToPostgresDb} from "./lib/database/postgresConnection";
-import ENV from "./lib/config/env";
-import {DEV} from "./lib/config/baseEnv";
 import http from "http";
 import helmet from "helmet";
 import compression from "compression";
-import redisClient, {connectToRedisDb} from "./lib/database/redis";
 import {RedisStore} from "connect-redis";
+import redisClient, {connectToRedisDb} from "@/lib/database/redis.js";
+import router from "@/routes/router.js";
+import {connectToPostgresDb} from "@/lib/database/postgresConnection.js";
 
 const app: Application = express();
 
 app.use(helmet());
 app.use(cors({
-    origin: ENV.ALLOWED_CORS_ORIGIN,
+    origin: ENV.ALLOWED_CORS_ORIGIN.split(","),
     credentials: true,
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 
 app.use(compression());
 
@@ -42,8 +42,9 @@ const sessionOptions: session.SessionOptions = {
     },
 };
 
+
 if (!DEV) {
-    sessionOptions.store = new RedisStore({ client: redisClient });
+    sessionOptions.store = new RedisStore({client: redisClient});
 }
 
 app.use(session(sessionOptions));
@@ -51,13 +52,14 @@ app.use(session(sessionOptions));
 
 app.use('/api', router);
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
     res.send('Welcome to the auth-service!');
 });
 
 const server: http.Server = http.createServer(app);
 
 const startServer = async () => {
+    logger.info("Starting server ...");
     try {
         await connectToPostgresDb();
         if (!DEV) {
@@ -73,7 +75,7 @@ const startServer = async () => {
     }
 };
 
-startServer();
+await startServer();
 
 process.on("uncaughtException", (error) => {
     logger.error("Uncaught Exception:", error);
@@ -90,4 +92,9 @@ process.on("SIGTERM", () => {
         logger.info("HTTP server closed.");
         process.exit(0);
     });
+});
+
+process.on("SIGINT", () => {
+    console.log("SIGINT (Ctrl+C) received - process exiting...");
+    process.exit(0);
 });

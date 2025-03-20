@@ -1,8 +1,8 @@
 import express, {Request, Response, Router} from "express";
-import {verifyUser} from "../middleware/verifyUser";
-import {logRequests} from "../middleware/logRequests";
-import User from "../types/User";
-import {mapUserToFrontend} from "../lib/mapper";
+import {logRequests} from "@/middleware/logRequests.js";
+import {verifyUser} from "@/middleware/verifyUser.js";
+import User from "@/types/User.js";
+import {mapUserToFrontend} from "@/lib/mapper.js";
 
 const userRouter: Router = express.Router();
 

@@ -10,6 +10,7 @@
     "clean": "rm -rf dist .turbo logs node_modules .eslintcache .next && yarn cache clean"
   },
   "dependencies": {
+    "@shopify/polaris": "^13.9.4",
     "loglevel": "^1.9.2",
     "next": "15.1.7",
     "postcss": "^8",

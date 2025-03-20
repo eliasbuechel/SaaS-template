@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import logger from "../utils/logger";
-import ENV from "./config/env";
+import ENV from "@/lib/config/env.js";
+import logger from "@/utils/logger.js";
 
 const ALGORITHM = "aes-256-ctr";
 const IV_LENGTH = 16;

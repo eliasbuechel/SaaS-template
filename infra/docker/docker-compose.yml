@@ -12,6 +12,7 @@ services:
     networks:
       - auth-service-redis-db-network
       - auth-service-postgres-db-network
+      - internal-network
     depends_on:
       auth-service-postgres-db:
         condition: service_healthy
@@ -63,6 +64,7 @@ services:
       - "3000:3000"
     depends_on:
       - auth-service
+      - shopify-service
     networks:
       - customer-dashboard-network
     command: [ "yarn", "dev" ]
@@ -78,19 +80,18 @@ services:
     env_file:
       - ../../backend/shopify-service/.env
     ports:
-      - "4001:4001"
+      - "4010:4010"
     networks:
       - shopify-service-redis-db-network
+      - internal-network
     depends_on:
       shopify-service-redis-db:
         condition: service_healthy
 
   shopify-service-redis-db:
     image: redis:alpine
-    container_name: shopify-service-db-redis
+    container_name: shopify-service-redis-db
     restart: always
-    ports:
-      - "6381:6379"
     volumes:
       - shopify-service-redis-db-data:/data
     networks:
@@ -115,4 +116,6 @@ networks:
   customer-dashboard-network:
     driver: bridge
   shopify-service-redis-db-network:
+    driver: bridge
+  internal-network:
     driver: bridge

@@ -1,4 +1,4 @@
-import logger from "../../utils/logger.js";
+import logger from "@/utils/logger.js";
 
 export function getRequiredEnv<T>(key: string, transformer: (value: string) => T): T {
     const value: string | undefined = process.env[key]?.trim() || undefined;
@@ -29,4 +29,10 @@ export function getEnvOrDefault<T>(key: string, defaultValue: T, transformer: (v
         logger.warn(`Invalid value for ${key}. Using default: ${defaultValue}`, error);
         return defaultValue;
     }
+}
+
+export function getDevOnlyRequiredEnv<T>(key: string, transformer: (value: string) => T): T | undefined {
+    const dev = process.env.NODE_ENV !== "production";
+    if (!dev) return undefined;
+    return getRequiredEnv(key, transformer);
 }

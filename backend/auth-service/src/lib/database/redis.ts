@@ -1,6 +1,6 @@
 import { createClient } from "redis";
-import logger from "../../utils/logger";
-import ENV from "../config/env";
+import logger from "@/utils/logger.js";
+import ENV from "@/lib/config/env.js";
 
 const redisClient = createClient({
     url: ENV.REDIS_DATABASE_URL,
@@ -15,15 +15,20 @@ redisClient.on("error", (error) => {
 });
 
 export const connectToRedisDb = async (): Promise<void> => {
+    if (redisClient.isReady)
+        return;
+    
     logger.debug(`Connecting to redis database at ${ENV.REDIS_DATABASE_URL}...`);
 
     try {
         await redisClient.connect();
         logger.info("Successfully connected to redis database");
-    } catch (error) {
+    } catch (error: any) {
         logger.error("Failed to connect to redis database:", error);
         throw Error(error);
     }
 };
+
+await connectToRedisDb();
 
 export default redisClient;

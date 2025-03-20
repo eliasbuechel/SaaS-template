@@ -1,5 +1,6 @@
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import prettierConfig from "eslint-config-prettier";
 
 export default [
     {
@@ -21,6 +22,7 @@ export default [
             "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
             "@typescript-eslint/explicit-function-return-type": "off"
 
-        }
+        },
+        ...prettierConfig
     }
 ];
