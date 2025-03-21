@@ -7,11 +7,11 @@ WORKDIR /app
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN NODE_ENV=development yarn workspaces focus --all && \
+RUN NODE_ENV=development yarn install && \
     yarn cache clean &&  \
     rm -rf /root/.yarn /root/.cache /root/.npm .yarn .next/cache
     
-COPY . .
+#COPY . .
 
 CMD ["yarn", "dev"]
 

@@ -67,8 +67,14 @@ services:
       - shopify-service
     networks:
       - customer-dashboard-network
-    command: [ "yarn", "dev" ]
-
+    volumes:
+      - ../../frontend/customer-dashboard:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+  
   shopify-service:
     image: shopify-service
     container_name: shopify-service
