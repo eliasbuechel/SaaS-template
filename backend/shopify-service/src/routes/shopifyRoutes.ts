@@ -53,7 +53,7 @@ shopifyRouter.get('/products', logRequests, verifyShopifySession, async (req: Re
         const products: Product[] = response.body.products as Product[];
         // logger.debug(`Shopify products: ${JSON.stringify(products)}`);
         logger.debug(`Retrieved ${products?.length} products from shopify.`);
-        if (products?.length > 0) logger.debug(`First product: ${JSON.stringify(products[0])}`)
+        // if (products?.length > 0) logger.debug(`First product: ${JSON.stringify(products[0])}`)
         
         res.json({ products });
     } catch (error) {
