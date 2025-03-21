@@ -21,7 +21,6 @@ interface IViewSettings {
   searchQuery: string;
   productStatus: string[];
   sortingOptions: string[];
-  [key: string]: string | string[];
 }
 
 function ProductList() {
@@ -37,8 +36,8 @@ function ProductList() {
     { label: "Title", value: "title desc", directionLabel: "Z-A" },
   ];
 
-  const [viewNames, setViewNames] = useState(["All"]);
-  const [selectedViewIndex, setSelectedViewIndex] = useState(0);
+  const [viewNames, setViewNames] = useState<string[]>(["All"]);
+  const [selectedViewIndex, setSelectedViewIndex] = useState<number>(0);
   const [viewSettings, setViewSettings] = useState<
     Record<string, IViewSettings>
   >({
@@ -309,6 +308,7 @@ function ProductList() {
 
   const mappedProduct = filteredAndSortedProducts.map((product) => ({
     ...product,
+    id: product.id.toString(),
   }));
 
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
@@ -317,9 +317,9 @@ function ProductList() {
   const rowMarkup = mappedProduct.map(
     ({ id, title, vendor, product_type, status }, index) => (
       <IndexTable.Row
-        id={id.toString()}
+        id={id}
         key={id}
-        selected={selectedResources.includes(id.toString())}
+        selected={selectedResources.includes(id)}
         position={index}
       >
         <IndexTable.Cell>{id}</IndexTable.Cell>
