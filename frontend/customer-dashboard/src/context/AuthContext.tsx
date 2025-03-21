@@ -14,6 +14,7 @@ interface AuthContextType {
     tenant: Tenant | null;
     tenants: Array<Tenant>;
     switchTenant: (tenantId: string | null) => void;
+    isAuthenticated: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 if (!authRes.ok) throw new Error(`Error fetching auth status. Response status ${authRes.status} not expected`);
-                if (window.location.pathname === "/login" || window.location.pathname === "/connect-shopify") window.location.href = "/dashboard";
+                if (window.location.pathname === "/login") window.location.href = "/dashboard";
                 
                 await loadTenant();
                 await loadTenants();
@@ -94,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 log.error("Error while loading auth data", error)
             } finally {
                 setLoading(false);
+                
             }
         }
         
@@ -134,9 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             log.error("Failed to switch to tenant: ", tenantId);
         }
     }
+    
+    const isAuthenticated = (): boolean => user !== null && tenant !== null;
 
     return (
-        <AuthContext.Provider value={{ user, setUser, logout, tenant, tenants, switchTenant }}>
+        <AuthContext.Provider value={{ user, setUser, logout, tenant, tenants, switchTenant, isAuthenticated }}>
             { loading ? ("loading...") : (children) }
         </AuthContext.Provider>
     );
