@@ -4,6 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import "@shopify/polaris/build/esm/styles.css";
 import PolarisProvider from "@/utils/PolarisPrivider";
+import {Box, Text} from "@shopify/polaris"
 
 export const metadata: Metadata = {
   title: "SaaS template - customer-dashboard",
@@ -23,7 +24,9 @@ export default function RootLayout({
             <Header />
             <main>{children}</main>
             <footer>
-              <p>© 2025 SaaS template</p>
+              <Box paddingBlockStart="200">
+                <Text as="p">© 2025 SaaS template</Text>
+              </Box>
             </footer>
           </AuthProvider>
         </PolarisProvider>
