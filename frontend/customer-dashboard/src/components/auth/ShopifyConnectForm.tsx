@@ -9,14 +9,16 @@ import {
   Button,
   InlineError,
   Page,
+  BlockStack,
 } from "@shopify/polaris";
 import {
   NEXT_PUBLIC_AUTH_SERVICE_URL,
   NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL,
 } from "@/lib/config";
-import { Text } from "@shopify/polaris";
 
 export default function ShopifyConnectForm() {
+  const SHOPIFY_SHOP_NAME_ENDING = ".myshopify.com";
+
   const [shopName, setShopName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -26,28 +28,40 @@ export default function ShopifyConnectForm() {
       return;
     }
 
-    setError(null); // Clear previous errors
+    if (
+      shopName.includes(".") &&
+      !shopName.endsWith(SHOPIFY_SHOP_NAME_ENDING)
+    ) {
+      setError(
+        `Shop name has to end with ${SHOPIFY_SHOP_NAME_ENDING} or or just the shop name.`,
+      );
+      return;
+    }
+
+    setError(null);
 
     window.location.href = `${NEXT_PUBLIC_AUTH_SERVICE_URL}/api/auth/shopify?shop=${encodeURIComponent(shopName)}&redirectUrlAfterAuth=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/dashboard&redirectUrlAfterError=${NEXT_PUBLIC_CUSTOMER_DASHBOARD_URL}/error`;
   }
 
   return (
-    <Page title="Shopify Connect">
+    <Page title="Connect to your shopify shop">
       <Card>
         <Form onSubmit={shopifyConnect}>
           <FormLayout>
-            <TextField
-              id={"shopName"}
-              label="Shopify Store Name"
-              value={shopName}
-              onChange={setShopName}
-              placeholder="your-shop-name."
-              autoComplete="off"
-            />
-            {error && <InlineError message={error} fieldID="shopNameError" />}
-            <Button submit variant="primary" fullWidth>
-              Connect to Shopify
-            </Button>
+            <BlockStack gap="300">
+              <TextField
+                id={"shopName"}
+                label="Shopify Store Name"
+                value={shopName}
+                onChange={setShopName}
+                placeholder="your-shop-name.myshopify.com"
+                autoComplete="off"
+              />
+              {error && <InlineError message={error} fieldID="shopNameError" />}
+              <Button submit variant="primary" fullWidth>
+                Connect to Shopify
+              </Button>
+            </BlockStack>
           </FormLayout>
         </Form>
       </Card>

@@ -13,8 +13,10 @@ import {
   Page,
   Button,
   IndexFiltersMode,
+  Spinner,
+  InlineStack,
 } from "@shopify/polaris";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Product } from "@/types/shopify/Product";
 
 interface IViewSettings {
@@ -209,10 +211,18 @@ function ProductList() {
 
   const handleSelectedViewIndexChange = useCallback(() => {
     const viewName = viewNames[selectedViewIndex];
-    
-    setSelectedSortingOptions(viewSettings[viewName]?.sortingOptions ?? DEFAULT_SORTING_SETTING);
-    setSearchQuery(viewSettings[viewName]?.searchQuery ?? DEFAULT_SEARCH_QUERY_FILTER_SETTINGS);
-    setSelectedProductStatus(viewSettings[viewName]?.productStatus ?? DEFAULT_PRODUCT_STATUS_FILTER_SETTINGS);
+
+    setSelectedSortingOptions(
+      viewSettings[viewName]?.sortingOptions ?? DEFAULT_SORTING_SETTING,
+    );
+    setSearchQuery(
+      viewSettings[viewName]?.searchQuery ??
+        DEFAULT_SEARCH_QUERY_FILTER_SETTINGS,
+    );
+    setSelectedProductStatus(
+      viewSettings[viewName]?.productStatus ??
+        DEFAULT_PRODUCT_STATUS_FILTER_SETTINGS,
+    );
   }, [viewNames, selectedViewIndex, viewSettings]);
 
   const handleSelectedSortingOptionsChange = useCallback(() => {
@@ -229,9 +239,6 @@ function ProductList() {
 
   useEffect(handleSelectedViewIndexChange, [selectedViewIndex]);
   useEffect(handleSelectedSortingOptionsChange, [selectedSortingOptions]);
-  useEffect(() => {
-    console.log("Updated view settings: ", viewSettings);
-  }, [viewSettings]);
 
   const filters = [
     {
@@ -340,50 +347,56 @@ function ProductList() {
         </Button>
       }
     >
-      <Card>
-        <IndexFilters
-          sortOptions={sortOptions}
-          sortSelected={selectedSortingOptions}
-          queryValue={searchQuery}
-          queryPlaceholder="Searching in all"
-          onQueryChange={handleSearchQueryChange}
-          onQueryClear={() => setSearchQuery("")}
-          onSort={setSelectedSortingOptions}
-          primaryAction={primaryAction}
-          cancelAction={{
-            onAction: onHandleCancel,
-            disabled: false,
-            loading: false,
-          }}
-          tabs={tabs}
-          selected={selectedViewIndex}
-          onSelect={setSelectedViewIndex}
-          canCreateNewView
-          onCreateNewView={createNewViewWithCurrentFilterSettings}
-          filters={filters}
-          appliedFilters={appliedFilters}
-          onClearAll={handleFiltersClearAll}
-          mode={mode}
-          setMode={setMode}
-        />
-        <IndexTable
-          resourceName={resourceName}
-          itemCount={mappedProduct.length}
-          selectedItemsCount={
-            allResourcesSelected ? "All" : selectedResources.length
-          }
-          onSelectionChange={handleSelectionChange}
-          headings={[
-            { title: "Id" },
-            { title: "Title" },
-            { title: "Vendor" },
-            { title: "Product Type" },
-            { title: "Status" },
-          ]}
-        >
-          {rowMarkup}
-        </IndexTable>
-      </Card>
+      {isLoading ? (
+        <InlineStack align="center">
+          <Spinner accessibilityLabel="Spinner example" size="large" />
+        </InlineStack>
+      ) : (
+        <Card>
+          <IndexFilters
+            sortOptions={sortOptions}
+            sortSelected={selectedSortingOptions}
+            queryValue={searchQuery}
+            queryPlaceholder="Searching in all"
+            onQueryChange={handleSearchQueryChange}
+            onQueryClear={() => setSearchQuery("")}
+            onSort={setSelectedSortingOptions}
+            primaryAction={primaryAction}
+            cancelAction={{
+              onAction: onHandleCancel,
+              disabled: false,
+              loading: false,
+            }}
+            tabs={tabs}
+            selected={selectedViewIndex}
+            onSelect={setSelectedViewIndex}
+            canCreateNewView
+            onCreateNewView={createNewViewWithCurrentFilterSettings}
+            filters={filters}
+            appliedFilters={appliedFilters}
+            onClearAll={handleFiltersClearAll}
+            mode={mode}
+            setMode={setMode}
+          />
+          <IndexTable
+            resourceName={resourceName}
+            itemCount={mappedProduct.length}
+            selectedItemsCount={
+              allResourcesSelected ? "All" : selectedResources.length
+            }
+            onSelectionChange={handleSelectionChange}
+            headings={[
+              { title: "Id" },
+              { title: "Title" },
+              { title: "Vendor" },
+              { title: "Product Type" },
+              { title: "Status" },
+            ]}
+          >
+            {rowMarkup}
+          </IndexTable>
+        </Card>
+      )}
     </Page>
   );
 

@@ -1,18 +1,26 @@
 "use client";
 
 import ShopifyConnectForm from "@/components/auth/ShopifyConnectForm";
-import {BlockStack, InlineStack} from "@shopify/polaris";
-import SwitchTenant from "@/components/auth/SwitchTenant";
+import { BlockStack, Box, InlineStack } from "@shopify/polaris";
 import { Button } from "@shopify/polaris";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Dashboard() {
-    const onContinue = () => window.location.href = "/dashboard";
-    
-    return <BlockStack>
-        <InlineStack align="center" gap="025">
-            <SwitchTenant/>
-            <Button onClick={onContinue}>Continue with selected Shop</Button>
-        </InlineStack>
-        <ShopifyConnectForm/>
-    </BlockStack>;
+  const { tenant } = useAuth();
+  const onContinue = () => (window.location.href = "/dashboard");
+
+  return (
+    <BlockStack gap="500">
+      <ShopifyConnectForm />
+      <InlineStack align="center">
+        {tenant ? (
+          <Button onClick={onContinue}>
+            Continue with {tenant.shopifyStoreDomain ?? ""}
+          </Button>
+        ) : (
+          <Box />
+        )}
+      </InlineStack>
+    </BlockStack>
+  );
 }
