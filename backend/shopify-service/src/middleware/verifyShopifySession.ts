@@ -1,34 +1,51 @@
-import {Request, Response, NextFunction} from "express";
+import { Request, Response, NextFunction } from "express";
 import ENV from "@/lib/config/env.js";
 import logger from "@/utils/logger.js";
+import axios, { AxiosResponse, HttpStatusCode } from "axios";
+import { Session } from "@shopify/shopify-api";
+import { setResponseWithErrorLog } from "@/utils/messageHandling.js";
+import "@shopify/shopify-api/adapters/node";
 
-export const verifyShopifySession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        const cookies = req.headers.cookie;
+export const verifyShopifySession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const response: AxiosResponse = await axios.get(
+      `${ENV.INTERNAL_AUTH_SERVICE_URL}/api/auth/shopify/session`,
+      {
+        headers: {
+          Authorization: `Bearer ${ENV.INTERNAL_AUTH_COMMUNICATION_SECRET}`,
+          Cookie: req.headers.cookie || "",
+        },
+      },
+    );
 
-        const response = await fetch(`${ENV.INTERNAL_AUTH_SERVICE_URL}/api/auth/shopify/session`, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                "Cookie": cookies || "",
-                "Authorization": `Bearer ${ENV.INTERNAL_AUTH_COMMUNICATION_SECRET}`
-            }
-        });
-
-        if (!response.ok) {
-            logger.error(`Error while retrieving shopify credentials. Received response status ${response.status}`);
-            res.status(401).send("Not authorized");
-            return;
-        }
-
-        const credentials = await response.json() as {shopifyStoreDomain:string, shopifySessionId:string};
-        req.shopifyStoreDomain = credentials.shopifyStoreDomain;
-        req.shopifySessionId = credentials.shopifySessionId;
-        
-        next();
+    if (response.status !== HttpStatusCode.Ok) {
+      logger.error(
+        `Error while retrieving shopify session. Received response status ${response.status}`,
+      );
+      return undefined;
     }
-    catch (error) {
-        logger.error(`Error fetching shopify credentials`, error);
-    }
-}
+
+    const sessionData = response.data;
+    logger.debug(`Received session data: ${sessionData}`);
+    const session = new Session(sessionData.id);
+    Object.assign(session, sessionData);
+
+    if (!session) throw Error("Not able to create Session with sessionData.");
+
+    req.shopifySession = session;
+    next();
+  } catch (error) {
+    setResponseWithErrorLog(
+      res,
+      500,
+      "Internal server error.",
+      "Error while retrieving shopify session.",
+      error,
+    );
+    return;
+  }
+};

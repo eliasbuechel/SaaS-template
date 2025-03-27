@@ -2,8 +2,8 @@
 
 import ProductList from "@/components/shopify/ProductList";
 
-function Shopify() {
-    return <ProductList/>
+function MyShop() {
+  return <ProductList />;
 }
 
-export default Shopify;
+export default MyShop;

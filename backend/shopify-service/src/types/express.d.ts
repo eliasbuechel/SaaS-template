@@ -1,8 +1,8 @@
 import "express";
+import {Session} from "@shopify/shopify-api";
 
 declare module "express-serve-static-core" {
     interface Request {
-        shopifyStoreDomain?: string,
-        shopifySessionId?: string
+        shopifySession?: Session;
     }
 }

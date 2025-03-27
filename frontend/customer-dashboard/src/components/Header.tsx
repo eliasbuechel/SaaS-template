@@ -1,30 +1,34 @@
 "use client";
 
 import React from "react";
-import { Box, InlineStack, Button } from "@shopify/polaris";
+import {
+  Box,
+  InlineStack,
+  Button,
+  Divider,
+  BlockStack,
+} from "@shopify/polaris";
 import SwitchTenant from "@/components/auth/SwitchTenant";
 import Navbar from "@/components/Navbar";
-import {useAuth} from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
+import ShopManager from "@/components/auth/ShopManager";
 
 export default function Header() {
-    const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const onConnectToShop = () => (window.location.href = "/connect-shopify");
-  
-const showShopHandling = (): boolean => isAuthenticated() && window.location.pathname !== "/connect-shopify";
+
+  const showShopHandling = (): boolean =>
+    isAuthenticated() && window.location.pathname !== "/connect-shopify";
 
   return (
-    <Box padding="200">
-      <InlineStack wrap={false} align={"space-between"} gap="200">
-        <Navbar/>
-        { showShopHandling() && (
-          <InlineStack gap="200">
-            <SwitchTenant />
-            <Button variant={"secondary"} onClick={onConnectToShop}>
-              Connect to different shop
-            </Button>
-          </InlineStack>
-        )}
-      </InlineStack>
+    <Box padding="500">
+      <BlockStack gap="300">
+        <InlineStack wrap={false} align={"space-between"} gap="200">
+          <ShopManager />
+          <Navbar />
+        </InlineStack>
+        <Divider />
+      </BlockStack>
     </Box>
   );
 }
