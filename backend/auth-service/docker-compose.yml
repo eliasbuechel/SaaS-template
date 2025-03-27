@@ -17,6 +17,13 @@ services:
         condition: service_healthy
       auth-service-redis-db:
         condition: service_healthy
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
 
   auth-service-postgres-db:
     image: postgres:14

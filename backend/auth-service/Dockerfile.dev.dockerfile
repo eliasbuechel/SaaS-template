@@ -8,13 +8,10 @@ ENV NODE_ENV=development
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN NODE_ENV=development yarn workspaces focus --all && \
-    yarn cache clean
-
-COPY . .
-
-RUN yarn lint
+RUN NODE_ENV=development yarn install && \
+    yarn cache clean &&  \
+    rm -rf /root/.yarn /root/.cache /root/.npm .yarn .next/cache
 
 EXPOSE 4000 4001
 
-CMD ["yarn", "tsx", "watch", "src/server.ts"]
+CMD ["yarn", "dev"]

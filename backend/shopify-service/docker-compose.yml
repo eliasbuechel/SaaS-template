@@ -14,6 +14,13 @@ services:
     depends_on:
       shopify-service-redis-db:
         condition: service_healthy
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
       
   shopify-service-redis-db:
     image: redis:alpine
