@@ -10,7 +10,7 @@ interface PageTitleProps {
 const PageTitle: React.FC<PageTitleProps> = ({ title }) => {
   return (
     <InlineStack align="center">
-      <Text as="h1" variant="heading3xl">
+      <Text as="h1" variant="heading2xl">
         {title}
       </Text>
     </InlineStack>

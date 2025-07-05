@@ -56,6 +56,10 @@ app.get('/', (_req: Request, res: Response) => {
     res.send('Welcome to the auth-service!');
 });
 
+app.get('/healthy', (_req: Request, res: Response) => {
+    res.status(200).send('OK');
+});
+
 const server: http.Server = http.createServer(app);
 
 const startServer = async () => {
@@ -75,7 +79,7 @@ const startServer = async () => {
     }
 };
 
-await startServer();
+startServer();
 
 process.on("uncaughtException", (error) => {
     logger.error("Uncaught Exception:", error);

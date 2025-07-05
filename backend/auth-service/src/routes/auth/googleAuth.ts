@@ -7,6 +7,7 @@ import logger from "@/utils/logger.js";
 import {IUser} from "@/interfaces/IUser.js";
 import {createUser, getUserByGoogleId} from "@/lib/database/userRepo.js";
 import {generateAccessToken, generateRefreshToken, setTokenOnResponse} from "@/lib/generateToken.js";
+import {DEV} from "@/lib/config/baseEnv.js";
 
 declare module 'express-session' {
     interface SessionData {
@@ -24,6 +25,8 @@ interface UserInfo {
     sub: string,
     email: string,
 }
+
+const REDIRECT_URI: string = `${DEV ? "http" : "https"}://${ENV.HOST_NAME}${ENV.GOOGLE_REDIRECT_URI}`;
 
 const createEncryptedState = (redirectUrlAfterAuth: string, redirectUrlAfterError: string): string => {
     const state: State = {
@@ -56,7 +59,7 @@ googleAuthRouter.get("/", logRequests, (req: Request, res: Response): void => {
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${ENV.GOOGLE_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(ENV.GOOGLE_REDIRECT_URI)}` +
+        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
         `&response_type=code` +
         `&scope=${encodeURIComponent(scopes.join(' '))}` +
         `&state=${encodeURIComponent(encryptedState)}` +
@@ -69,20 +72,36 @@ googleAuthRouter.get("/", logRequests, (req: Request, res: Response): void => {
 
 const getGoogleOAuth2AccessToken = async (code: string): Promise<string | null> => {
     const tokenUrl: string = 'https://oauth2.googleapis.com/token';
-    const response: globalThis.Response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            code: code as string,
-            client_id: ENV.GOOGLE_CLIENT_ID!,
-            client_secret: ENV.GOOGLE_CLIENT_SECRET!,
-            redirect_uri: ENV.GOOGLE_REDIRECT_URI!,
-            grant_type: 'authorization_code'
-        })
-    });
+    
+    try {
+        const response: globalThis.Response = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                code: code as string,
+                client_id: ENV.GOOGLE_CLIENT_ID!,
+                client_secret: ENV.GOOGLE_CLIENT_SECRET!,
+                redirect_uri: REDIRECT_URI,
+                grant_type: 'authorization_code'
+            })
+        });
 
-    const responseData = await response.json() as { access_token: string | null};
-    return responseData.access_token;
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            logger.error('Failed to retrieve access token:', {
+                status: response.status,
+                statusText: response.statusText,
+                responseData
+            });
+            return null;
+        }
+
+        return (responseData as { access_token: string | null}).access_token ?? null;
+    } catch (error) {
+        logger.error('Error during access token retrieval:', error);
+        return null;
+    }
 };
 
 const getGoogleOAuth2UserInfo = async (googleOAuthAccessToken: string): Promise<UserInfo> => {

@@ -26,7 +26,7 @@ export default function SwitchTenant() {
       setSelected(tenant);
       switchTenant(tenant.id);
     },
-    [tenants],
+    [tenants, switchTenant],
   );
 
   if (!tenant) return <p>No shop connected yet</p>;

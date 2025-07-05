@@ -2,11 +2,12 @@ services:
   auth-service:
     image: auth-service
     container_name: auth-service
-    build: 
+    build:
      context: .
-     dockerfile: Dockerfile.dev.dockerfile
+     dockerfile: Dockerfile.local.dockerfile
     env_file:
-      - ./.env
+      - .env.local
+      - .env.secret
     ports:
       - "4000:4000"
     networks:
@@ -24,22 +25,29 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -o /dev/null http://localhost:4000/healthy || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   auth-service-postgres-db:
     image: postgres:14
     container_name: auth-service-postgres-db
     restart: always
     env_file:
-      - ./.env.auth-service-postgres-db
+      - .env.auth-service-postgres-db.secret
     volumes:
       - auth-service-postgres-db-data:/var/lib/postgresql/data
     networks:
       - auth-service-postgres-db-network
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"'"]
-      interval: 5s
-      retries: 5
-      start_period: 10s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
       
   auth-service-redis-db:
     image: redis:alpine
@@ -51,8 +59,9 @@ services:
       - auth-service-redis-db-network
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      retries: 5
+      interval: 10s
+      timeout: 3s
+      retries: 3
       start_period: 5s
     command: ["redis-server", "--appendonly", "yes"]
 

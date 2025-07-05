@@ -13,8 +13,6 @@ RUN NODE_ENV=development yarn install && \
     yarn cache clean &&  \
     rm -rf /root/.yarn /root/.cache /root/.npm .yarn .next/cache 
 
-ENV NODE_ENV=production
-
 EXPOSE 4010
 
 CMD ["yarn", "dev"]

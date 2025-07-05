@@ -31,9 +31,9 @@ export function getEnvOrDefault<T>(key: string, defaultValue: T, transformer: (v
     }
 }
 
-export function getDevOnlyRequiredEnv<T>(key: string, transformer: (value: string) => T): T | undefined {
+export function getProdOnlyRequiredEnv<T>(key: string, transformer: (value: string) => T): T | undefined {
     const dev = process.env.NODE_ENV !== "production";
-    if (!dev) return undefined;
+    if (dev) return undefined;
     
     return getRequiredEnv(key, transformer);
 }

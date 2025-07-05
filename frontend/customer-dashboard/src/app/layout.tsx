@@ -19,10 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <PolarisProvider>
-          <AuthProvider>
-            <BlockStack gap="500" align="space-between">
+    <body>
+    <PolarisProvider>
+      <AuthProvider>
+        <BlockStack gap="500" align="space-between">
               <Header />
               <main>{children}</main>
               <Footer />

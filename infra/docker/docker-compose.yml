@@ -4,15 +4,17 @@ services:
     container_name: auth-service
     build:
       context: ../../backend/auth-service
-      dockerfile: ../../backend/auth-service/Dockerfile.dev.dockerfile
+      dockerfile: ../../backend/auth-service/Dockerfile.prod.dockerfile
     env_file:
-      - ../../backend/auth-service/.env
+      - ../../backend/auth-service/.env.production
+      - ../../backend/auth-service/.env.secret
     ports:
       - "4000:4000"
     networks:
       - auth-service-redis-db-network
       - auth-service-postgres-db-network
       - internal-network
+      - reverse-proxy-network
     depends_on:
       auth-service-postgres-db:
         condition: service_healthy
@@ -25,22 +27,29 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -o /dev/null http://localhost:4000/healthy || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
         
   auth-service-postgres-db:
     image: postgres:14
     container_name: auth-service-postgres-db
     restart: always
     env_file:
-      - ../../backend/auth-service/.env.auth-service-postgres-db
+      - ../../backend/auth-service/.env.auth-service-postgres-db.secret
     volumes:
       - auth-service-postgres-db-data:/var/lib/postgresql/data
     networks:
       - auth-service-postgres-db-network
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\"'"]
-      interval: 5s
-      retries: 5
-      start_period: 10s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
   
   auth-service-redis-db:
     image: redis:alpine
@@ -52,49 +61,27 @@ services:
       - auth-service-redis-db-network
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      retries: 5
+      interval: 10s
+      timeout: 3s
+      retries: 3
       start_period: 5s
     command: ["redis-server", "--appendonly", "yes"]
-
-  customer-dashboard:
-    image: customer-dashboard
-    container_name: customer-dashboard
-    build:
-      context: ../../frontend/customer-dashboard
-      dockerfile: ../../frontend/customer-dashboard/Dockerfile.dev.dockerfile
-      args:
-        NODE_ENV: development
-    env_file:
-      - ../../frontend/customer-dashboard/.env
-    ports:
-      - "3000:3000"
-    depends_on:
-      - auth-service
-      - shopify-service
-    networks:
-      - customer-dashboard-network
-    volumes:
-      - ../../frontend/customer-dashboard:/app
-      - /app/node_modules
-      - /app/.next
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
   
   shopify-service:
     image: shopify-service
     container_name: shopify-service
     build:
       context: ../../backend/shopify-service
-      dockerfile: ../../backend/shopify-service/Dockerfile.dev.dockerfile
+      dockerfile: ../../backend/shopify-service/Dockerfile.prod.dockerfile
     env_file:
-      - ../../backend/shopify-service/.env
+      - ../../backend/shopify-service/.env.production
+      - ../../backend/shopify-service/.env.secret
     ports:
       - "4010:4010"
     networks:
       - shopify-service-redis-db-network
       - internal-network
+      - reverse-proxy-network
     depends_on:
       shopify-service-redis-db:
         condition: service_healthy
@@ -105,6 +92,12 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -o /dev/null http://localhost:4010/healthy || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   shopify-service-redis-db:
     image: redis:alpine
@@ -114,12 +107,45 @@ services:
       - shopify-service-redis-db-data:/data
     networks:
       - shopify-service-redis-db-network
+    command: [ "redis-server", "--appendonly", "yes" ]
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      retries: 5
+      interval: 10s
+      timeout: 3s
+      retries: 3
       start_period: 5s
-    command: [ "redis-server", "--appendonly", "yes" ]
+      
+  customer-dashboard:
+    image: customer-dashboard
+    container_name: customer-dashboard
+    build:
+      context: ../../frontend/customer-dashboard
+      dockerfile: ../../frontend/customer-dashboard/Dockerfile.prod.dockerfile
+    env_file:
+      - ../../frontend/customer-dashboard/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      shopify-service:
+        condition: service_healthy
+    networks:
+      - customer-dashboard-network
+      - reverse-proxy-network
+    volumes:
+      - ../../frontend/customer-dashboard:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -o /dev/null http://localhost:3000 || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
   
 volumes:
   auth-service-redis-db-data:
@@ -136,4 +162,6 @@ networks:
   shopify-service-redis-db-network:
     driver: bridge
   internal-network:
+    driver: bridge
+  reverse-proxy-network:
     driver: bridge

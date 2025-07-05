@@ -1,0 +1,16 @@
+services:
+  reverse-proxy:
+    image: reverse-proxy
+    container_name: reverse-proxy
+    build:
+      context: ./reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - murpheuz-network
+    volumes:
+      - ./reverse-proxy/nginx-ssl-retrieve.development.conf:/etc/nginx/nginx.conf
+      - ./reverse-proxy/log/nginx:/var/log/nginx
+#      - ./certbot/conf:/etc/letsencrypt
+#      - ./certbot/www:/var/www/certbot

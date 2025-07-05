@@ -25,12 +25,13 @@ interface IViewSettings {
   sortingOptions: string[];
 }
 
+const DEFAULT_SORTING_SETTING: string[] = ["id asc"];
+const DEFAULT_SEARCH_QUERY_FILTER_SETTINGS: string = "";
+const DEFAULT_PRODUCT_STATUS_FILTER_SETTINGS: string[] = [];
+
 function ProductList() {
   const { products, isLoading, reload } = useProducts();
-  const DEFAULT_SORTING_SETTING: string[] = ["id asc"];
-  const DEFAULT_SEARCH_QUERY_FILTER_SETTINGS: string = "";
-  const DEFAULT_PRODUCT_STATUS_FILTER_SETTINGS: string[] = [];
-
+  
   const sortOptions: IndexFiltersProps["sortOptions"] = [
     { label: "Id", value: "id asc", directionLabel: "Ascending" },
     { label: "Id", value: "id desc", directionLabel: "Descending" },
@@ -123,6 +124,7 @@ function ProductList() {
       setViewNames((prev) => prev.filter((_, i) => i !== index));
       setViewSettings((prev) => {
         const { [viewName]: deletingSettings, ...rest } = prev;
+        console.info(`Deleted view settings: ${deletingSettings}`);
         return rest;
       });
       setSelectedViewIndex(0);
@@ -400,7 +402,7 @@ function ProductList() {
     </Page>
   );
 
-  function disambiguateLabel(key: string, value: string | any[]): string {
+  function disambiguateLabel(key: string, value: string | string[]): string {
     switch (key) {
       case "moneySpent":
         return `Money spent is between $${value[0]} and $${value[1]}`;
@@ -413,7 +415,7 @@ function ProductList() {
     }
   }
 
-  function isEmpty(value: string | any[]) {
+  function isEmpty(value: string | string[]) {
     if (Array.isArray(value)) {
       return value.length === 0;
     } else {

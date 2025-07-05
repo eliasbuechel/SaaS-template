@@ -1,17 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, InlineStack, Button, BlockStack } from "@shopify/polaris";
 import SwitchTenant from "@/components/auth/SwitchTenant";
 import { useAuth } from "@/context/AuthContext";
 
 export default function ShopManager() {
   const { isAuthenticated, tenant } = useAuth();
+  const [pathname, setPathname] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPathname(window.location.pathname);
+    }
+  }, []);
   const onConnectToDifferentShop = () =>
     (window.location.href = "/connect-shopify");
 
-  const isOnConnectShopifyPage =
-    window.location.pathname === "/connect-shopify";
+  const isOnConnectShopifyPage = pathname === "/connect-shopify";
 
   if (isAuthenticated())
     return (

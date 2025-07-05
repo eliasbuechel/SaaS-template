@@ -1,5 +1,6 @@
-FROM node:22-bookworm-slim
+FROM node:22-bookworm
 
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare yarn@stable --activate
 
 WORKDIR /app

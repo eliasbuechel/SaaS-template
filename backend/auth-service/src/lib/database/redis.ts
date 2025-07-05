@@ -29,6 +29,6 @@ export const connectToRedisDb = async (): Promise<void> => {
     }
 };
 
-await connectToRedisDb();
+connectToRedisDb();
 
 export default redisClient;
