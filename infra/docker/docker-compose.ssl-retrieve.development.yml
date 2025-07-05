@@ -1,0 +1,19 @@
+services:
+  reverse-proxy:
+    volumes:
+      - ./reverse-proxy/nginx-ssl-retrieve.development.conf:/etc/nginx/nginx.conf
+      - ./reverse-proxy/log/nginx:/var/log/nginx
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/letsencrypt-logs:/var/log/letsencrypt/
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: certonly --webroot -w /var/www/certbot/ --force-renewal --email email_address -d dev.murpheuz.com -d dev.auth.murpheuz.com -d dev.shopify.murpheuz.com --agree-tos --test-cert
+    depends_on:
+      reverse-proxy:
+        condition: service_healthy

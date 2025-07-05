@@ -5,7 +5,11 @@ if (!fs.existsSync("/.dockerenv")) {
     console.log("🖥️ Running outside Docker");
     console.log("Loading environment variables using dotenv...");
     try {
-        dotenv.config();
+        dotenv.config({path: ".env.local"});
+        if (fs.existsSync(".env.secret")) {
+            dotenv.config({ path: ".env.secret", override: true });
+            console.log("Loaded additional secrets from .env.secret.");
+        }
     } catch (error) {
         console.log("Error while loading .env using dotenv", error);
         process.exit(1);
@@ -17,7 +21,7 @@ if (!fs.existsSync("/.dockerenv")) {
 }
 
 import TRANSFORMERS from "@/lib/config/transformers.js";
-import {getDevOnlyRequiredEnv, getEnvOrDefault, getRequiredEnv} from "@/lib/config/envUtils.js";
+import {getEnvOrDefault, getRequiredEnv} from "@/lib/config/envUtils.js";
 
 
 export enum NodeEnv {
@@ -31,7 +35,7 @@ interface BaseEnv {
     PORT: number;
     ALLOWED_CORS_ORIGIN: string;
 
-    REDIS_DATABASE_URL?: string;
+    REDIS_DATABASE_URL: string;
     SESSION_SECRET: string;
     JWT_ACCESS_SECRET: string;
     JWT_REFRESH_SECRET: string;
@@ -44,7 +48,7 @@ const BASE_ENV: BaseEnv = {
     PORT: getEnvOrDefault("PORT", 4000, TRANSFORMERS.NUMBER),
     ALLOWED_CORS_ORIGIN: getRequiredEnv('ALLOWED_CORS_ORIGIN', TRANSFORMERS.STRING),
 
-    REDIS_DATABASE_URL: getDevOnlyRequiredEnv("REDIS_DATABASE_URL", TRANSFORMERS.STRING),
+    REDIS_DATABASE_URL: getRequiredEnv("REDIS_DATABASE_URL", TRANSFORMERS.STRING),
     SESSION_SECRET: getRequiredEnv('SESSION_SECRET', TRANSFORMERS.STRING),
     JWT_ACCESS_SECRET: getRequiredEnv('JWT_ACCESS_SECRET', TRANSFORMERS.STRING),
     JWT_REFRESH_SECRET: getRequiredEnv('JWT_REFRESH_SECRET', TRANSFORMERS.STRING),

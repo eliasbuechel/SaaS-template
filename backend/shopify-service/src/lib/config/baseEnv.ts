@@ -5,7 +5,11 @@ if (!fs.existsSync("/.dockerenv")) {
     console.log("🖥️ Running outside Docker");
     console.log("Loading environment variables using dotenv...");
     try {
-        dotenv.config();
+        dotenv.config({path: ".env.local"});
+        if (fs.existsSync(".env.secret")) {
+            dotenv.config({ path: ".env.secret", override: true });
+            console.log("Loaded additional secrets from .env.secret.");
+        }
     } catch (error) {
         console.log("Error while loading .env using dotenv", error);
         process.exit(1);

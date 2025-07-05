@@ -18,10 +18,11 @@ RUN yarn build
 
 FROM node:20-alpine
 
-WORKDIR /app
-
+RUN apk add --no-cache curl
 RUN corepack enable && \
-    corepack prepare yarn@4.7.0 --activate
+    corepack prepare yarn@4.7.0 --activate 
+
+WORKDIR /app
 
 COPY --from=builder /app/package.json /app/yarn.lock /app/.yarnrc.yml /app/
 COPY --from=builder /app/.next /app/.next

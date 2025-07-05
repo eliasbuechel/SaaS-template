@@ -1,5 +1,6 @@
 FROM node:23.8.0-alpine
 
+RUN apk add --no-cache curl
 RUN corepack enable && corepack prepare yarn@stable --activate
 
 WORKDIR /app
@@ -14,6 +15,8 @@ RUN NODE_ENV=production yarn workspaces focus --all --production && \
 COPY . .
 
 RUN yarn build
+
+EXPOSE 4010
 
 CMD ["node", "/app/dist/server.js"]
 

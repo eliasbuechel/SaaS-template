@@ -4,9 +4,10 @@ services:
     container_name: shopify-service
     build:
       context: .
-      dockerfile: Dockerfile.dev.dockerfile
+      dockerfile: Dockerfile.local.dockerfile
     env_file:
-      - ./.env
+      - .env.local
+      - .env.secret
     ports:
       - "4010:4010"
     networks:
@@ -21,6 +22,12 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -o /dev/null http://localhost:4010/healthy || exit 1" ]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
       
   shopify-service-redis-db:
     image: redis:alpine
@@ -33,10 +40,10 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      retries: 5
+      interval: 10s
+      timeout: 3s
+      retries: 3
       start_period: 5s
-
 
 volumes:
   shopify-service-redis-db-data:

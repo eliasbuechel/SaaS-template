@@ -24,7 +24,7 @@ export const shopify = shopifyApi({
         log: (severity, msg) => logger.log(logLevelMap[severity], msg),
         level: DEV ? LogSeverity.Debug : LogSeverity.Info
     },
-});
+}) as ReturnType<typeof shopifyApi>;
 
 // export type Product = typeof shopify.rest.Product;
 

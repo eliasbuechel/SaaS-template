@@ -1,0 +1,55 @@
+services:
+  auth-service:
+    build:
+      context: ../../backend/auth-service
+      dockerfile: ../../backend/auth-service/Dockerfile.dev.dockerfile
+    env_file:
+      - ../../backend/auth-service/.env.development
+      - ../../backend/auth-service/.env.secret
+    volumes:
+      - ../../backend/auth-service:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+  
+  shopify-service:
+    build:
+      context: ../../backend/shopify-service
+      dockerfile: ../../backend/shopify-service/Dockerfile.dev.dockerfile
+    env_file:
+      - ../../backend/shopify-service/.env.development
+      - ../../backend/shopify-service/.env.secret
+
+  customer-dashboard:
+    build:
+      context: ../../frontend/customer-dashboard
+      dockerfile: ../../frontend/customer-dashboard/Dockerfile.dev.dockerfile
+    env_file:
+      - ../../frontend/customer-dashboard/.env.development
+        
+  reverse-proxy:
+    image: reverse-proxy
+    container_name: reverse-proxy
+    build:
+      context: ../reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      customer-dashboard:
+        condition: service_healthy
+    networks:
+      - reverse-proxy-network
+    volumes:
+      - ../reverse-proxy/nginx-ssl-retrieve.production.conf:/etc/nginx/nginx.conf
+      - ../reverse-proxy/log/nginx:/var/log/nginx
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
